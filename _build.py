@@ -138,7 +138,15 @@ SESSIONS = [
               ("s3","3 · Covariance & correlation"),("s4","4 · The covariance matrix"),
               ("s5","5 · NumPy"),("s6","6 · Inside ML"),("ref","Rules & traps"),
               ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
-    # Sessions 15–18 get appended here as each _content.html is authored.
+    dict(num="15", slug="15_sampling_clt", title="Sampling & the CLT",
+         lede="Why averages of almost anything become Gaussian — the Central Limit Theorem, "
+              "standard error, and the √n law behind confidence and A/B tests.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Expectation & variance"],
+         toc=[("s1","1 · Population & sample"),("s2","2 · The sample mean"),
+              ("s3","3 · The CLT"),("s4","4 · Standard error & √n"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 16–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range

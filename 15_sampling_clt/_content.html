@@ -1,0 +1,258 @@
+<p class="dropcap">Why is the Gaussian <em>everywhere</em>? Session 13 asserted it; this session explains it. Take almost any distribution — skewed, spiky, lumpy — draw a sample, and average it. Do that over and over, and the <strong>averages</strong> pile up into a bell curve, no matter what the original looked like. That's the <strong>Central Limit Theorem</strong>, one of the most surprising and useful facts in all of mathematics — and the foundation for confidence intervals, A/B tests, the bootstrap, and why "more data" reliably helps.</p>
+
+<p>This session is about <em>sampling</em>: how a statistic computed from a sample behaves, why the sample mean is so well-behaved, and the √n law that governs how fast estimates sharpen.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Distinguish a <strong>population</strong>, a <strong>sample</strong>, and a <strong>sampling distribution</strong>.</li>
+    <li>State that the sample mean has $E=\mu$ and variance $\sigma^2/n$, giving <strong>standard error</strong> $\sigma/\sqrt{n}$.</li>
+    <li>State the <strong>Law of Large Numbers</strong> and the <strong>Central Limit Theorem</strong>.</li>
+    <li>Apply the <strong>√n law</strong> — quadrupling data only halves the error.</li>
+    <li>Connect this to bootstrapping, mini-batch noise, ensembling, and A/B testing.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> Extends <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) <span class="secs">§6.4 (means &amp; variances)</span> with the classical sampling theory — the Law of Large Numbers and Central Limit Theorem — that MML relies on but leaves to statistics texts. A high-job-value addition for DS interviews.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Population & sample</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">The sample mean</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">The CLT</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Standard error & √n</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\bar{X}_n$</span><span class="def">The sample mean of $n$ draws — itself a random variable.</span>
+    <span class="sym">$\mu,\ \sigma$</span><span class="def">Population mean and standard deviation.</span>
+    <span class="sym">$\sigma/\sqrt{n}$</span><span class="def">Standard error — the std dev of the sample mean.</span>
+    <span class="sym">LLN</span><span class="def">Law of Large Numbers: $\bar{X}_n\to\mu$.</span>
+    <span class="sym">CLT</span><span class="def">Central Limit Theorem: $\bar{X}_n$ becomes Gaussian.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Population, sample &amp; sampling distribution <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.4</a></h2>
+
+<p>The <strong>population</strong> is everything you could measure (all users, all possible rolls); its true mean $\mu$ and std $\sigma$ are usually unknown. A <strong>sample</strong> is the $n$ values you actually observe, from which you compute a <strong>statistic</strong> like the sample mean $\bar{X}_n$. The crucial insight: a statistic is <em>itself random</em> — draw a new sample and you get a different value. Its distribution over all possible samples is the <strong>sampling distribution</strong>, and understanding it is what lets you say how much to trust an estimate.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Run <code>AVG(revenue)</code> on today's data, then on a different day's — you get different numbers even if nothing "really" changed. That wobble <em>is</em> the sampling distribution. This session quantifies it, so you can tell a real shift from sampling noise (exactly what A/B testing needs).</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The sample mean is beautifully behaved</h2>
+
+<p>Because expectation is linear and (for independent draws) variances add (Session 14), the sample mean of $n$ i.i.d. draws has:</p>
+<div class="mathband">$$ E[\bar{X}_n]=\mu, \qquad \operatorname{Var}(\bar{X}_n)=\frac{\sigma^2}{n}, \qquad \text{so } \operatorname{SE}=\frac{\sigma}{\sqrt{n}} $$</div>
+
+<p>Two consequences. First, it's <strong>unbiased</strong> — on average it hits the true mean. Second, its spread <em>shrinks</em> as $n$ grows: the <strong>Law of Large Numbers</strong> says $\bar{X}_n\to\mu$ as $n\to\infty$. Average enough data and you home in on the truth. The standard deviation of the sample mean, $\sigma/\sqrt{n}$, gets its own name: the <strong>standard error</strong>.</p>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>The Central Limit Theorem</h2>
+
+<p>The LLN says <em>where</em> the mean lands; the CLT says <em>what shape</em> its distribution takes. And the answer is astonishing:</p>
+
+<div class="mathband">$$ \bar{X}_n \;\xrightarrow{\ n\to\infty\ }\; \mathcal{N}\!\left(\mu,\ \frac{\sigma^2}{n}\right) \qquad\text{whatever the shape of the original distribution} $$</div>
+
+<p>Sum or average enough independent pieces and the result is Gaussian — even if each piece is uniform, exponential, or wildly bimodal. Pick a deliberately un-Gaussian source below, then raise the sample size and watch the distribution of the <em>means</em> collapse into a bell.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="cltplay" width="880" height="400"></canvas>
+    <div class="ctrlrow"><span class="lbl2">source:</span>
+      <button class="ctrl" data-key="uniform">Uniform</button>
+      <button class="ctrl" data-key="exp">Exponential</button>
+      <button class="ctrl" data-key="bimodal">Bimodal</button>
+      <button class="ctrl" data-key="dice">Dice</button>
+    </div>
+    <div class="ctrlrow"><span class="lbl2">sample size n:</span>
+      <input type="range" id="sN" min="1" max="50" step="1" value="1" style="flex:1;accent-color:var(--accent);max-width:320px;"><span id="rN" class="vd">1</span></div>
+    <div class="readout">
+      <span><span class="k">mean of means</span> ≈ <span class="va" id="rMu">…</span></span>
+      <span><span class="k">std of means (SE)</span> ≈ <span class="vs" id="rSE">…</span></span>
+      <span id="rNote" class="vd">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — The CLT in action.</strong> The histogram is the distribution of 3,000 sample <em>means</em>, each averaging <b>n</b> draws from your chosen source; the amber curve is the Gaussian the CLT predicts, $\mathcal{N}(\mu,\sigma^2/n)$. At <b>n = 1</b> it's just the raw (non-Gaussian) source. Slide n up and — no matter how lumpy the source — the means pull into a tight bell that hugs the amber curve.</figcaption>
+</figure>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Standard error &amp; the √n law</h2>
+
+<p>The standard error $\sigma/\sqrt{n}$ has a humbling implication: precision improves with the <em>square root</em> of the data, not linearly.</p>
+<ul>
+  <li>To <strong>halve</strong> your error, you need <strong>4×</strong> the data.</li>
+  <li>To cut it <strong>10×</strong>, you need <strong>100×</strong> the data.</li>
+</ul>
+<p>This is why the first thousand examples help enormously and the millionth barely moves the estimate — diminishing returns baked into the mathematics of averaging.</p>
+
+<details class="deeper"><summary>Going deeper — the exact statement and its conditions</summary><div class="deep-body">
+  <p>Formally, for i.i.d. $X_1,\dots,X_n$ with finite mean $\mu$ and finite variance $\sigma^2$, the standardized sample mean converges in distribution to a standard normal:</p>
+  <div class="mathband">$$ \frac{\bar{X}_n-\mu}{\sigma/\sqrt{n}}\ \xrightarrow{\ d\ }\ \mathcal{N}(0,1) $$</div>
+  <p>Two conditions matter: the draws are <strong>independent and identically distributed</strong>, and the variance is <strong>finite</strong> (heavy-tailed distributions like Cauchy have no finite variance and the CLT fails). A common rule of thumb is $n\gtrsim30$, but skewed sources need more (watch the demo's Exponential need a larger n than Uniform). The $\sigma^2/n$ comes straight from Session 14: variances of independent things add, so averaging $n$ of them divides the variance by $n$. <span class="secs">Builds on MML §6.4.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="c"># CLT: means of an exponential (very skewed) source look Gaussian</span>
+means = [np.random.exponential(<span class="n">1.0</span>, size=<span class="n">30</span>).mean() <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">5000</span>)]
+<span class="f">print</span>(<span class="f">round</span>(np.mean(means),<span class="n">3</span>), <span class="f">round</span>(np.std(means),<span class="n">3</span>))  <span class="c"># ~1.0, ~1/sqrt(30)=0.183</span>
+
+<span class="c"># standard error and the sqrt(n) law</span>
+data = np.random.exponential(<span class="n">1.0</span>, size=<span class="n">1000</span>)
+se = data.std(ddof=<span class="n">1</span>) / np.sqrt(len(data))
+<span class="f">print</span>(<span class="f">round</span>(se, <span class="n">4</span>))                     <span class="c"># standard error of the mean</span>
+
+<span class="c"># bootstrap: estimate the SE by resampling (no formula needed)</span>
+boot = [np.random.choice(data, size=len(data), replace=<span class="k">True</span>).mean() <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">2000</span>)]
+<span class="f">print</span>(<span class="f">round</span>(np.std(boot), <span class="n">4</span>))            <span class="c"># ≈ the formula's SE above</span></pre>
+<div class="out">1.001 0.182
+0.0316
+0.0315   # bootstrap SE matches the σ/√n formula</div>
+
+<div class="callout c-warn"><span class="tag">The bootstrap: SE without a formula</span>
+When there's no clean formula for a statistic's standard error (a median, an AUC, an R²), <strong>bootstrap</strong> it: resample your data with replacement many times, recompute the statistic each time, and take the std of those values. It's the CLT/sampling idea turned into a universal, code-only tool — heavily used to put error bars on ML metrics.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Confidence in metrics.</strong> Your model's accuracy on a test set is a sample mean — it has a standard error. Report error bars (bootstrap) instead of a single number.</li>
+  <li><strong>Mini-batch gradients</strong> are sample means of per-example gradients, so their noise scales as $\sigma/\sqrt{\text{batch}}$ — bigger batches = less gradient noise (Session 11).</li>
+  <li><strong>Ensembling / bagging</strong> averages many models; since variances of independent errors add and then divide by count, the ensemble's variance drops — the CLT's variance reduction, monetized.</li>
+  <li><strong>A/B testing</strong> (Session 16) rests entirely on the sampling distribution of a difference in means being approximately Gaussian.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Averages of independent things are Gaussian with mean $\mu$ and standard error $\sigma/\sqrt{n}$ — that's the CLT. It's why the normal distribution is everywhere, why more data helps (but only as $\sqrt{n}$), and why we can put honest error bars on estimates.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>The CLT is about the <em>mean/sum</em></strong>, not individual values — averaging Gaussianizes; the raw data stays whatever shape it was.</li>
+  <li><strong>Independence &amp; finite variance required</strong> — correlated samples or heavy tails (Cauchy) break it.</li>
+  <li><strong>Skewed sources need larger $n$</strong> — the $n\ge30$ rule is rough; check, don't assume.</li>
+  <li><strong>Standard error ≠ standard deviation</strong> — SE = $\sigma/\sqrt{n}$ describes the <em>estimate's</em> wobble, not the data's spread.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>The sample mean has $E=\mu$, $\operatorname{Var}=\sigma^2/n$, <strong>SE $=\sigma/\sqrt{n}$</strong>.</li>
+  <li><strong>LLN:</strong> the sample mean converges to the true mean as $n\to\infty$.</li>
+  <li><strong>CLT:</strong> the sample mean/sum becomes <strong>Gaussian</strong> regardless of the source's shape.</li>
+  <li><strong>√n law:</strong> to halve the error, quadruple the data.</li>
+  <li>No formula for a statistic's SE? <strong>Bootstrap</strong> it by resampling.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · "My data will become normal with more samples"</span>
+No — the CLT normalizes the <em>average</em>, not the raw data. A skewed variable stays skewed; only its sample mean's distribution turns Gaussian.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Confusing SD and SE</span>
+Standard deviation describes spread of the data; standard error describes uncertainty of the estimate and shrinks with $n$. Reporting SD where SE is meant overstates uncertainty (and vice-versa).</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Assuming the CLT always applies</span>
+It needs i.i.d. draws and finite variance. Correlated observations (time series), tiny $n$ on skewed data, or heavy tails invalidate it — and A/B tests built on it then mislead.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">You quadruple your sample size. What happens to the standard error of the mean?</div>
+  <button class="opt">It quarters (÷4).</button>
+  <button class="opt">It stays the same.</button>
+  <button class="opt">It halves (÷2) — SE ∝ 1/√n.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="1">
+  <div class="qz">The CLT says that with large n, which becomes approximately Gaussian?</div>
+  <button class="opt">The individual data values.</button>
+  <button class="opt">The distribution of the sample mean (or sum).</button>
+  <button class="opt">Every distribution's variance.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Draw 5,000 means of 30 uniform(0,1) samples. What are the mean and std of those means (compare to $1/2$ and $\frac{1}{\sqrt{12\cdot30}}$)?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">m=[np.random.rand(<span class="n">30</span>).mean() <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">5000</span>)]
+np.mean(m), np.std(m)   <span class="c"># ~0.5, ~0.0527 (= (1/√12)/√30)</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Show the √n law: compute SE for n=100 and n=400 from the same source; confirm the second is half.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>SE ∝ $1/\sqrt{n}$, and $\sqrt{400}/\sqrt{100}=2$, so the n=400 SE is half the n=100 SE.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Take a very skewed source (exponential). Histogram single draws vs means of 50. Which is Gaussian-looking?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Single draws stay skewed (long right tail); the means of 50 look like a symmetric bell — the CLT acting on the average, not the raw data.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Bootstrap the standard error of the <em>median</em> of a dataset (no clean formula exists).</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">d=np.random.exponential(<span class="n">1</span>,<span class="n">500</span>)
+boot=[np.median(np.random.choice(d,<span class="n">500</span>,replace=<span class="k">True</span>)) <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">2000</span>)]
+np.std(boot)   <span class="c"># bootstrap SE of the median</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Ensembling: average the predictions of $k$ independent noisy models (each error std 1). Show the ensemble error std drops as $1/\sqrt{k}$ for $k=1,4,16$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="k">for</span> k <span class="k">in</span> (<span class="n">1</span>,<span class="n">4</span>,<span class="n">16</span>):
+    err=np.random.normal(<span class="n">0</span>,<span class="n">1</span>,(<span class="n">100000</span>,k)).mean(<span class="n">1</span>)
+    <span class="f">print</span>(k, <span class="f">round</span>(err.std(),<span class="n">3</span>))   <span class="c"># ~1, ~0.5, ~0.25</span></pre>
+    <p>Averaging $k$ independent errors cuts the std by $\sqrt{k}$ — exactly why bagging/ensembles reduce variance.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · State the Central Limit Theorem.</div><div class="a">For i.i.d. variables with finite mean μ and variance σ², the sample mean's distribution approaches $\mathcal{N}(\mu,\sigma^2/n)$ as n grows — regardless of the original distribution's shape.</div></div>
+<div class="qa"><div class="q">Q2 · LLN vs CLT?</div><div class="a">LLN: the sample mean converges to the true mean (where it lands). CLT: the sample mean's distribution becomes Gaussian with SE σ/√n (what shape the wobble takes).</div></div>
+<div class="qa"><div class="q">Q3 · What is the standard error, and the √n law?</div><div class="a">SE = σ/√n, the std dev of the sample mean. Because of the square root, halving the error needs 4× the data — diminishing returns.</div></div>
+<div class="qa"><div class="q">Q4 · What is bootstrapping and when do you use it?</div><div class="a">Resampling the data with replacement to build a sampling distribution empirically — used to estimate standard errors / confidence intervals for statistics with no clean formula (median, AUC, model metrics).</div></div>
+<div class="qa"><div class="q">Q5 · How does the CLT relate to ensembling?</div><div class="a">Averaging k independent models' errors reduces the variance by k (std by √k), since independent variances add then divide — the same math that makes the sample mean precise.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Sampling distribution</td><td>How much to trust an estimate</td><td class="freq f-h">High</td></tr>
+  <tr><td>SE = σ/√n</td><td>Error bars; gradient/metric noise</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Law of Large Numbers</td><td>More data → estimate converges</td><td class="freq f-h">High</td></tr>
+  <tr><td>Central Limit Theorem</td><td>Why Gaussians are everywhere; A/B tests</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>√n law</td><td>Diminishing returns of more data</td><td class="freq f-h">High</td></tr>
+  <tr><td>Bootstrap</td><td>Error bars for any statistic</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../16_inference/theory.html" style="border:0;color:inherit">16 · Inference & hypothesis testing →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">The CLT gives the sampling distribution; inference uses it to answer "is this effect real?" — confidence intervals, p-values, and the A/B test that ships product decisions.</p>
+</div>
