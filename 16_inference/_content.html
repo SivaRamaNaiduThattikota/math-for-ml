@@ -1,0 +1,256 @@
+<p class="dropcap">You shipped a new model and accuracy went from 91.2% to 91.6%. Real improvement, or luck of the test set? Your redesigned checkout converted 4.1% vs 3.8% — launch it, or noise? <strong>Statistical inference</strong> answers exactly these questions: it uses the sampling distribution (Session 15) to decide whether an observed effect is <em>real</em> or could easily be random wobble. Confidence intervals, p-values, and the A/B test are its tools — and they decide product launches and model rollouts every day.</p>
+
+<p>This is the most directly job-relevant session in the probability pillar: A/B testing and "is this difference significant?" come up in nearly every data-science interview.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Build and correctly interpret a <strong>confidence interval</strong>.</li>
+    <li>Run a <strong>hypothesis test</strong>: null vs alternative, test statistic, <strong>p-value</strong>, significance level $\alpha$.</li>
+    <li>Distinguish <strong>Type I / Type II errors</strong> and understand statistical <strong>power</strong>.</li>
+    <li>Set up and read an <strong>A/B test</strong> of two conversion rates.</li>
+    <li>Avoid the classic pitfalls: p-hacking, multiple comparisons, and significance ≠ importance.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> Extends the probability chapter of <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) into <span class="secs">classical statistical inference</span> — confidence intervals, p-values, and A/B testing — which MML leaves to statistics texts. Very high job value for DS/ML interviews.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Confidence intervals</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Hypothesis testing</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Errors & power</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">A/B testing</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">Pitfalls</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">NumPy & ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">CI</span><span class="def">Confidence interval — a plausible range for a parameter.</span>
+    <span class="sym">$H_0,\ H_1$</span><span class="def">Null (no effect) and alternative hypotheses.</span>
+    <span class="sym">$p$-value</span><span class="def">P(data this extreme, or more, if $H_0$ is true).</span>
+    <span class="sym">$\alpha$</span><span class="def">Significance level / Type I error rate (often 0.05).</span>
+    <span class="sym">power</span><span class="def">$1-\beta$: chance of detecting a real effect.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Confidence intervals</h2>
+
+<p>A point estimate ($\bar{X}=3.8\%$) hides its uncertainty. A <strong>confidence interval</strong> attaches a range, using the standard error from Session 15:</p>
+<div class="mathband">$$ \text{estimate} \;\pm\; z^{*}\cdot \text{SE} \qquad (z^{*}=1.96 \text{ for } 95\%) $$</div>
+
+<p>The correct interpretation is subtle and a favourite interview trap: a <strong>95% CI</strong> means "if we repeated the experiment many times, 95% of the intervals we build would contain the true value." It is <em>not</em> "95% probability the true value is in <em>this</em> interval" — the true value is fixed; the interval is what's random. Practically: wider CI = more uncertainty; it shrinks as $\sqrt{n}$ grows.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+It's the error bar you wish every dashboard KPI had. "Conversion = 3.8%" is a point; "3.8% ± 0.4%" tells you whether last week's 4.1% is a real move or within noise. Inference is the discipline of drawing those error bars honestly.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Hypothesis testing &amp; the p-value</h2>
+
+<p>A hypothesis test is a formal skeptic. You state a <strong>null hypothesis</strong> $H_0$ ("no effect — the two versions convert equally") and an <strong>alternative</strong> $H_1$ ("there is a difference"). Then you ask: <em>if $H_0$ were true, how surprising is the data I saw?</em> That surprise is the <strong>p-value</strong>:</p>
+<div class="mathband">$$ p = P(\text{observing data this extreme, or more}\ \mid\ H_0\ \text{is true}) $$</div>
+
+<p>Small $p$ = the data would be very unlikely under "no effect," so you <strong>reject $H_0$</strong> and call the result <strong>statistically significant</strong>. The threshold is the <strong>significance level</strong> $\alpha$ (commonly 0.05): reject when $p<\alpha$. The recipe: compute a <strong>test statistic</strong> (how many standard errors the effect is from zero), convert it to a p-value via the sampling distribution (Gaussian, by the CLT).</p>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Type I / Type II errors &amp; power</h2>
+
+<p>A test can be wrong two ways:</p>
+<ul>
+  <li><strong>Type I error (false positive)</strong> — reject $H_0$ when it's actually true (declare an effect that isn't real). Its rate is $\alpha$.</li>
+  <li><strong>Type II error (false negative)</strong> — fail to reject $H_0$ when there <em>is</em> a real effect (miss it). Its rate is $\beta$.</li>
+</ul>
+<p><strong>Power</strong> $=1-\beta$ is the probability of detecting a real effect. Power rises with <strong>larger sample size</strong>, <strong>bigger true effect</strong>, and <strong>higher $\alpha$</strong> (though raising $\alpha$ trades away false-positive control). Underpowered tests waste effort — they can't see the effect even if it's there — which is why you compute the needed $n$ <em>before</em> running an experiment.</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>The A/B test</h2>
+
+<p>The canonical application: split users into <strong>control (A)</strong> and <strong>treatment (B)</strong>, measure a metric (say conversion rate), and test whether B truly differs from A. $H_0$: the rates are equal. Simulate one below — adjust the true rates and sample size, and re-run experiments to feel how randomness produces "significant" results that come and go when the effect is small or $n$ is low.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="abplay" width="880" height="320"></canvas>
+    <div class="ctrlrow"><span class="lbl2">true rate A:</span>
+      <input type="range" id="sRateA" min="0.05" max="0.4" step="0.01" value="0.10" style="flex:1;accent-color:var(--accent);max-width:200px;"><span id="rRA" class="vd">10%</span></div>
+    <div class="ctrlrow"><span class="lbl2">true lift (B−A):</span>
+      <input type="range" id="sLift" min="-0.02" max="0.08" step="0.005" value="0.02" style="flex:1;accent-color:var(--accent);max-width:200px;"><span id="rLift" class="vd">+2.0%</span></div>
+    <div class="ctrlrow"><span class="lbl2">n per group:</span>
+      <input type="range" id="sNum" min="100" max="20000" step="100" value="2000" style="flex:1;accent-color:var(--accent);max-width:200px;"><span id="rNum" class="vd">2000</span>
+      <button class="btn-anim" id="abBtn" style="margin-top:0">🎲 New experiment</button></div>
+    <div class="readout">
+      <span><span class="k">observed A / B</span> = <span class="va" id="rObs">…</span></span>
+      <span><span class="k">p-value</span> = <span class="vs" id="rP">…</span></span>
+      <span id="rVerdict" class="vd">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — A/B test simulator.</strong> Bars are the <em>observed</em> conversion rates for A (grey) and B (indigo) with 95% confidence-interval whiskers. The verdict runs a two-proportion z-test: <b>significant</b> when the p-value &lt; 0.05. Set a small true lift with small $n$ and hit "New experiment" a few times — you'll see the verdict flip between runs (that's Type I/II error and why underpowered tests mislead). Crank $n$ up and a real lift becomes reliably detectable.</figcaption>
+</figure>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>Pitfalls that ruin conclusions</h2>
+<ul>
+  <li><strong>Misreading the p-value</strong> — it is <em>not</em> the probability that $H_0$ is true, nor the probability your result is a fluke. It's P(data | $H_0$).</li>
+  <li><strong>Significance ≠ importance</strong> — with huge $n$, a trivial 0.01% lift can be "significant." Always report the <strong>effect size</strong> and CI, not just $p<0.05$.</li>
+  <li><strong>Multiple comparisons</strong> — test 20 features at $\alpha=0.05$ and you expect ~1 false positive by chance. Correct for it (Bonferroni, FDR).</li>
+  <li><strong>Peeking / early stopping</strong> — checking an A/B test repeatedly and stopping when it's "significant" massively inflates false positives.</li>
+</ul>
+
+<details class="deeper"><summary>Going deeper — what a p-value is <em>not</em></summary><div class="deep-body">
+  <p>The p-value is $P(\text{data}\mid H_0)$, <strong>not</strong> $P(H_0\mid \text{data})$ — flipping those is the Bayesian/base-rate confusion from Session 12. A p-value of 0.03 does not mean "3% chance the null is true" or "97% chance my effect is real"; it means "if there were truly no effect, data this extreme would occur 3% of the time." Likewise a 95% CI is a statement about the <em>procedure's</em> long-run coverage, not the probability for one specific interval. And "fail to reject $H_0$" is not "prove $H_0$" — absence of evidence isn't evidence of absence, especially in an underpowered test. These distinctions are exactly the interview traps. <span class="secs">Relates to Bayes, Session 12.</span></p>
+</div></details>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">from</span> math <span class="k">import</span> erf, sqrt
+Phi = <span class="k">lambda</span> z: <span class="n">0.5</span>*(<span class="n">1</span> + erf(z/sqrt(<span class="n">2</span>)))          <span class="c"># standard-normal CDF</span>
+
+<span class="c"># A/B test: two-proportion z-test</span>
+nA, nB = <span class="n">2000</span>, <span class="n">2000</span>
+cA, cB = <span class="n">200</span>, <span class="n">240</span>                              <span class="c"># conversions</span>
+pA, pB = cA/nA, cB/nB
+p = (cA+cB)/(nA+nB)                              <span class="c"># pooled rate under H0</span>
+se = sqrt(p*(<span class="n">1</span>-p)*(<span class="n">1</span>/nA + <span class="n">1</span>/nB))
+z  = (pB - pA)/se
+pval = <span class="n">2</span>*(<span class="n">1</span> - Phi(<span class="f">abs</span>(z)))                     <span class="c"># two-sided</span>
+<span class="f">print</span>(<span class="f">round</span>(pB-pA,<span class="n">3</span>), <span class="f">round</span>(z,<span class="n">2</span>), <span class="f">round</span>(pval,<span class="n">4</span>))     <span class="c"># lift, z, p-value</span>
+
+<span class="c"># 95% CI for the difference</span>
+se_d = sqrt(pA*(<span class="n">1</span>-pA)/nA + pB*(<span class="n">1</span>-pB)/nB)
+lo, hi = (pB-pA) - <span class="n">1.96</span>*se_d, (pB-pA) + <span class="n">1.96</span>*se_d
+<span class="f">print</span>(<span class="f">round</span>(lo,<span class="n">3</span>), <span class="f">round</span>(hi,<span class="n">3</span>))                  <span class="c"># CI excludes 0 -> significant</span></pre>
+<div class="out">0.02 2.09 0.0364
+0.001 0.039   # 95% CI for the lift excludes 0</div>
+
+<ul>
+  <li><strong>Model comparison</strong> — "is model B's higher accuracy real?" is a hypothesis test / CI on the metric difference (often via a paired test or bootstrap CI).</li>
+  <li><strong>Feature &amp; launch decisions</strong> — A/B tests gate product and model rollouts; power analysis sets the sample size up front.</li>
+  <li><strong>Multiple-testing correction</strong> — trying many models/features/hyperparameters inflates false positives; correct or use a held-out final test.</li>
+  <li><strong>Error bars on metrics</strong> — bootstrap CIs (Session 15) turn a single accuracy number into an honest range.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Inference turns "we saw a difference" into "the difference is (un)likely to be noise." Confidence intervals give a range; p-values quantify surprise under "no effect"; A/B tests apply it to decisions — just don't misread the p-value or ignore effect size.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>p-value ≠ P(H₀ true)</strong> — it's P(data | H₀). The flip requires a prior (Bayes, Session 12).</li>
+  <li><strong>Not significant ≠ no effect</strong> — could be an underpowered test; report the CI, which shows what effect sizes remain plausible.</li>
+  <li><strong>Big n makes tiny effects significant</strong> — significance is about detectability, not importance; report effect size.</li>
+  <li><strong>Assumptions:</strong> tests assume independent samples and (via CLT) enough data; correlated or tiny samples break them.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li><strong>CI</strong> = estimate ± $z^{*}\cdot$SE; a 95% CI covers the truth 95% of the time <em>across repeats</em>.</li>
+  <li><strong>p-value</strong> = P(data this extreme | $H_0$); reject $H_0$ when $p<\alpha$.</li>
+  <li><strong>Type I</strong> = false positive ($\alpha$); <strong>Type II</strong> = false negative ($\beta$); <strong>power</strong> $=1-\beta$.</li>
+  <li><strong>A/B test</strong>: two-sample test of a difference; power grows with $n$ and effect size.</li>
+  <li>Always report <strong>effect size + CI</strong>, correct for <strong>multiple comparisons</strong>, and don't <strong>peek</strong>.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Misinterpreting the p-value</span>
+"p=0.03 → 97% chance my effect is real" is wrong. It's P(data|no effect)=3%. Confusing it with P(hypothesis|data) is the base-rate error from Session 12.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Significance without effect size</span>
+With enough data everything is significant. A launch decision needs the <em>size</em> of the lift and its CI, not just $p<0.05$.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Peeking & multiple comparisons</span>
+Repeatedly checking a running A/B test, or testing many variants, inflates false positives fast. Fix the sample size in advance and correct for multiplicity (Bonferroni/FDR).</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">A test gives p = 0.03. Which statement is correct?</div>
+  <button class="opt">There's a 3% chance the null hypothesis is true.</button>
+  <button class="opt">If there were no real effect, data this extreme would occur 3% of the time.</button>
+  <button class="opt">There's a 97% chance the effect is important.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">Your A/B test isn't significant, but the CI for the lift is [−1%, +9%]. Best conclusion?</div>
+  <button class="opt">There is definitely no effect.</button>
+  <button class="opt">The effect is proven small.</button>
+  <button class="opt">Inconclusive / underpowered — a meaningful positive lift is still plausible; collect more data.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>A sample of 400 has mean 50 and std 10. Build the 95% CI for the mean.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>SE $=10/\sqrt{400}=0.5$; CI $=50\pm1.96(0.5)=[49.02,\ 50.98]$.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>A/B: A = 200/2000, B = 240/2000. Compute the lift and the two-proportion z-statistic.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Lift $=0.12-0.10=0.02$; pooled $p=0.11$, SE $=\sqrt{0.11\cdot0.89(1/2000+1/2000)}\approx0.0099$; $z\approx2.02$ → $p\approx0.043$, significant at 0.05.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Write a two-sided p-value function from the normal CDF and reproduce E2's p-value.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="k">from</span> math <span class="k">import</span> erf, sqrt
+Phi=<span class="k">lambda</span> z:<span class="n">0.5</span>*(<span class="n">1</span>+erf(z/sqrt(<span class="n">2</span>)))
+z=<span class="n">2.02</span>; <span class="n">2</span>*(<span class="n">1</span>-Phi(<span class="f">abs</span>(z)))   <span class="c"># ~0.043</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Simulate the false-positive rate: run 10,000 A/B tests with <em>no</em> true effect ($p_A=p_B=0.1$, $n=1000$) and count how often $p<0.05$. What should it be?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>About <strong>5%</strong> — that's the definition of $\alpha$: with a true null, you falsely "detect" an effect 5% of the time. This is why multiple testing needs correction.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Power: with $p_A=0.10$, $p_B=0.12$, estimate the power at $n=1000$ vs $n=5000$ by simulating many experiments and measuring the fraction that reach $p<0.05$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Power is much higher at $n=5000$ than $n=1000$ — a real 2-point lift is detected far more reliably with more data. Simulate: draw binomials, run the z-test, and average the "significant" flag over many runs.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What exactly is a p-value?</div><div class="a">The probability of observing data at least as extreme as yours <em>if the null hypothesis were true</em>. Small p → the data is surprising under "no effect" → reject the null. It is not P(H₀ true).</div></div>
+<div class="qa"><div class="q">Q2 · How do you interpret a 95% confidence interval?</div><div class="a">Across many repeated experiments, 95% of the intervals constructed this way would contain the true parameter. For a single interval you don't assign it a 95% probability — the parameter is fixed.</div></div>
+<div class="qa"><div class="q">Q3 · Type I vs Type II error, and power?</div><div class="a">Type I = false positive (reject a true null, rate α). Type II = false negative (miss a real effect, rate β). Power = 1−β, the chance of detecting a true effect; it grows with n and effect size.</div></div>
+<div class="qa"><div class="q">Q4 · How would you run an A/B test?</div><div class="a">Randomize users to control/treatment, fix the metric and sample size (power analysis) in advance, run to completion (no peeking), then test the difference (e.g. two-proportion z-test) and report the effect size with a CI.</div></div>
+<div class="qa"><div class="q">Q5 · Why can a statistically significant result be unimportant?</div><div class="a">With large n, even a trivially small effect yields a small p-value. Significance measures detectability, not magnitude — always report effect size and CI.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Confidence interval</td><td>Error bars on estimates & metrics</td><td class="freq f-h">High</td></tr>
+  <tr><td>Hypothesis test / p-value</td><td>Is an effect real or noise?</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Type I / II & power</td><td>Sample sizing; reliability of tests</td><td class="freq f-h">High</td></tr>
+  <tr><td>A/B testing</td><td>Model/feature launch decisions</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>p-value pitfalls</td><td>Common interview traps; honest analysis</td><td class="freq f-vh">Very high</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../17_mle_cross_entropy/theory.html" style="border:0;color:inherit">17 · MLE & cross-entropy →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Where do loss functions actually come from? Maximum likelihood: pick the parameters that make the observed data most probable — and its logarithm gives MSE and cross-entropy directly.</p>
+</div>

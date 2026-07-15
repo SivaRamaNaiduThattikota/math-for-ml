@@ -146,7 +146,15 @@ SESSIONS = [
               ("s3","3 · The CLT"),("s4","4 · Standard error & √n"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 16–18 get appended here as each _content.html is authored.
+    dict(num="16", slug="16_inference", title="Inference & hypothesis testing",
+         lede="Is this effect real or just noise? Confidence intervals, p-values, and the "
+              "A/B test that ships product and model decisions.",
+         meta=["~22 min read", "NumPy paired notebook", "Prereq: Sampling & the CLT"],
+         toc=[("s1","1 · Confidence intervals"),("s2","2 · Hypothesis testing"),
+              ("s3","3 · Errors & power"),("s4","4 · A/B testing"),("s5","5 · Pitfalls"),
+              ("s6","6 · NumPy & ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 17–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range
