@@ -1,0 +1,431 @@
+<p class="dropcap">Every machine-learning model you have ever run — the fraud classifier, the churn model, the retrieval engine in OpsRAG — begins by throwing away the human-readable version of your data and replacing each record with a list of numbers. That list is a <strong>vector</strong>. Nothing else in this course makes sense until vectors feel like second nature, because a vector is the atom every other idea is built from: matrices are stacks of them, gradients are them, embeddings are them, model weights are them.</p>
+
+<p>This session has one job: to make you fluent at moving between the three ways of seeing a vector, and comfortable with the handful of operations that everything downstream reuses.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>See any data row as a point in $\mathbb{R}^n$ — and know why that lets ML treat tables as geometry.</li>
+    <li>Add, scale, and subtract vectors, and read each operation both algebraically and geometrically.</li>
+    <li>Compute L2 / L1 norms and explain how they become Ridge and Lasso regularization.</li>
+    <li>Turn "similar" into "close" via distance = ‖a − b‖, and explain why feature scaling comes first.</li>
+    <li>Write all of it as vectorized NumPy — no loops — and dodge the broadcasting / zero-vector traps.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong, Cambridge, 2020) — <span class="secs">§2.4 Vector Spaces, §3.1 Norms, §3.3 Lengths &amp; Distances</span>. We build the intuition here; read those sections for the formal treatment. The PDF is free for personal use.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Three views of a vector</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">What components mean</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Core operations</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Norms (L1/L2)</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">Distance</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">NumPy &amp; vectorization</span></a>
+  <a href="#s7"><span class="n">07</span><span class="t">Feature scaling</span></a>
+  <a href="#s8"><span class="n">08</span><span class="t">High dimensions</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\mathbf{v}$</span><span class="def">A vector (bold, lowercase). An ordered list of numbers.</span>
+    <span class="sym">$v_i$</span><span class="def">The <em>i</em>-th component (scalar) of vector <b>v</b>.</span>
+    <span class="sym">$\mathbb{R}^n$</span><span class="def">The space of all real vectors with <em>n</em> components ("R-n").</span>
+    <span class="sym">$\lVert\mathbf{v}\rVert$</span><span class="def">The norm (length) of <b>v</b>. Defaults to L2 unless subscripted.</span>
+    <span class="sym">$\lVert\mathbf{v}\rVert_1,\ \lVert\mathbf{v}\rVert_2$</span><span class="def">The L1 (taxicab) and L2 (Euclidean) norms specifically.</span>
+    <span class="sym">$\hat{\mathbf{v}}$</span><span class="def">The unit vector — <b>v</b> normalized to length 1.</span>
+    <span class="sym">$\hat{x},\ \hat{y}$</span><span class="def">The standard basis (axis) unit vectors, [1,0] and [0,1].</span>
+    <span class="sym">$\mathbf{a}\cdot\mathbf{b}$</span><span class="def">The dot product of <b>a</b> and <b>b</b> (full treatment in Session 2).</span>
+  </div>
+</details>
+
+<!-- ════════════ 1 ════════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Three ways to see the same object</h2>
+
+<p>A vector is, most literally, an <strong>ordered list of numbers</strong>:</p>
+
+<div class="mathband">$$ \mathbf{v} = \begin{bmatrix} 3 \\ 4 \end{bmatrix} \qquad\text{written inline as}\qquad \mathbf{v} = [3,\ 4] $$</div>
+
+<p>"Ordered" is doing real work in that sentence: <code>[3, 4]</code> and <code>[4, 3]</code> are different vectors, because position carries meaning — the first slot might be <em>tenure</em> and the second <em>monthly charge</em>. Swapping them scrambles the data. Now the same object, seen three ways:</p>
+
+<aside class="side"><span class="lbl">Definition</span><b>Scalar</b> — a single number, no direction (e.g. <code>7</code>). <b>Vector</b> — an ordered tuple of scalars. The scalars are its <b>components</b>.</aside>
+
+<ul>
+  <li><strong>As an arrow.</strong> Start at the origin, walk 3 right and 4 up. The vector <em>is</em> that arrow — it has a <strong>length</strong> and a <strong>direction</strong>.</li>
+  <li><strong>As a point.</strong> Forget the arrow, keep the tip: the location <code>(3, 4)</code>. This is the view ML uses most — every row is a dot floating in space.</li>
+  <li><strong>As data.</strong> One customer: <code>[tenure = 3, charge = 4]</code>. The whole dataset is a cloud of such points, and "learning" means finding structure in that cloud.</li>
+</ul>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+One <strong>row</strong> of a table, keeping only its numeric columns, <strong>is a vector</strong>. A table with 10 numeric columns is a cloud of points in 10-dimensional space. You already built these objects every day in Power BI — you just called them rows. The mental upgrade is small but total: a row is not a record in a grid, it is a <em>location</em>.</div>
+
+<h3>Dimensions are just "how many numbers"</h3>
+<p>A vector with $n$ components lives in $\mathbb{R}^n$ — read aloud as "R-n," the space of all real vectors with $n$ slots. This notation looks intimidating and means almost nothing:</p>
+<ul>
+  <li>A 2-D point is in $\mathbb{R}^2$ — you can draw it.</li>
+  <li>A flattened $28\times28$ grayscale image is in $\mathbb{R}^{784}$ — you cannot draw it, but the algebra is identical.</li>
+  <li>A sentence embedding from OpsRAG's <code>all-MiniLM-L6-v2</code> is in $\mathbb{R}^{384}$.</li>
+</ul>
+<p>The crucial and slightly magical fact: <strong>every operation in this lesson works the same in 2 dimensions and in 784</strong>. We develop intuition where we can see (2-D), then apply it blindly and correctly in dimensions we can't. That transfer is the entire reason a spreadsheet can be treated as geometry.</p>
+
+<!-- interactive -->
+<figure class="fig">
+  <div class="frame">
+    <canvas id="vplay" width="880" height="470"></canvas>
+    <div class="readout">
+      <span><span class="k">a</span> = <span class="va" id="rA">[4, 2]</span></span>
+      <span><span class="k">b</span> = <span class="vb" id="rB">[1, 3]</span></span>
+      <span><span class="k">a+b</span> = <span class="vs" id="rSum">[5, 5]</span></span>
+      <span><span class="k">‖a‖</span> = <span class="vd" id="rMagA">4.47</span></span>
+      <span><span class="k">a·b</span> = <span class="vd" id="rDot">10</span></span>
+      <span><span class="k">∠</span> = <span class="vd" id="rAng">36.9</span>°</span>
+    </div>
+    <button class="btn-anim" id="animAdd">▶ Animate a + b (tip-to-tail)</button>
+  </div>
+  <figcaption><strong>Figure 1 — Drag the arrowheads.</strong> Blue is <b>a</b>, teal is <b>b</b>. The amber arrow is their sum (note the dashed parallelogram). Watch magnitude, dot product, and angle update as you move them. Try to make the two arrows perpendicular — the dot product will pass through zero exactly when they form a right angle. That single fact is the whole of Session 2.</figcaption>
+</figure>
+
+<!-- ════════════ 2 ════════════ -->
+<h2 id="s2"><span class="num">Section 2</span>What the components actually mean</h2>
+
+<p>It is tempting to treat <code>[3, 4]</code> as an opaque pair. It is worth spending thirty seconds on what it <em>decomposes</em> into, because that decomposition is the seed of basis vectors, PCA, and embeddings later on. The vector <code>[3, 4]</code> is shorthand for:</p>
+
+<div class="mathband">$$ [3,4] \;=\; 3\underbrace{[1,0]}_{\hat{x}} \;+\; 4\underbrace{[0,1]}_{\hat{y}} $$</div>
+
+<aside class="side"><span class="lbl">Thread forward</span>Right now the axes are the obvious <b>x̂</b> and <b>ŷ</b>. In <b>PCA</b> we'll <em>choose new axes</em> aligned with the data's spread — same vector, smarter coordinates. Hold onto this picture. <a class="xref" href="../07_svd_pca/theory.html">↳ Session 7</a></aside>
+
+<p>In words: "three steps along the x-axis, four along the y-axis." The numbers are <strong>coordinates relative to a chosen set of axes</strong> (here the standard axes $\hat{x}=[1,0]$ and $\hat{y}=[0,1]$). Nothing forces us to use those axes — and the day we pick better ones is the day PCA happens. For now, just register that a vector's components are always relative to <em>some</em> frame of reference.</p>
+
+<!-- ════════════ 3 ════════════ -->
+<h2 id="s3"><span class="num">Section 3</span>The operations that everything reuses</h2>
+
+<h3>Addition — walk one arrow, then the other</h3>
+<p>Vector addition is <strong>component-wise</strong>:</p>
+<div class="mathband">$$ [4,2] + [1,3] = [4{+}1,\; 2{+}3] = [5,5] $$</div>
+<p>Geometrically there are two equivalent pictures, and you want both in your head. <strong>Tip-to-tail:</strong> place the tail of <b>b</b> at the tip of <b>a</b>; the sum runs from the origin to where you end up. <strong>Parallelogram:</strong> the sum is the diagonal of the parallelogram spanned by <b>a</b> and <b>b</b> (that is the dashed shape in Figure 1). Because addition is component-wise, it is <strong>commutative</strong> — $\mathbf{a}+\mathbf{b}=\mathbf{b}+\mathbf{a}$ — which is why the parallelogram is symmetric.</p>
+<p>Where does this show up in ML? Any time contributions combine linearly: a linear model's prediction is a sum of weighted feature vectors; a residual is <code>actual − predicted</code>, a vector subtraction; a gradient-descent step is "current weights <strong>+</strong> a small correction vector." Addition is not a toy — it is the update rule of learning.</p>
+
+<h3>Scalar multiplication — stretch, don't turn</h3>
+<div class="mathband">$$ 2\cdot[4,2] = [8,4] \qquad -1\cdot[4,2] = [-4,-2] \qquad 0\cdot[4,2] = [0,0] $$</div>
+<p>Multiplying a vector by a scalar scales its <strong>length</strong> and leaves its <strong>direction</strong> untouched — except a negative scalar flips it 180°, and zero collapses it to the origin. This is exactly the <em>learning rate</em> in gradient descent: you compute a direction to move (a vector), then multiply it by a small scalar to take a cautious step.</p>
+
+<h3>Subtraction — the difference vector points from b to a</h3>
+<p>$\mathbf{a}-\mathbf{b}$ is just $\mathbf{a}+(-\mathbf{b})$, so it is still component-wise. But its <em>geometry</em> is the single most useful picture in this lesson:</p>
+<div class="mathband">$$ \mathbf{a}-\mathbf{b} \;\text{ is the arrow that points from the tip of } \mathbf{b} \text{ to the tip of } \mathbf{a}. $$</div>
+<aside class="side"><span class="lbl">Why this matters</span>The difference vector is how ML measures <b>error</b> (prediction − target) and <b>separation</b> (point − point). Its <em>length</em> is a distance; its <em>direction</em> is where gradients point. Two of the biggest ideas in the field are hiding in one subtraction. <a class="xref" href="../11_gradient_descent/theory.html">↳ Session 11</a></aside>
+<p>That is why the distance between two data points is the <em>length of their difference vector</em> — a fact we cash in two sections from now for k-nearest-neighbours and clustering.</p>
+
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 460 300" role="img" aria-label="Difference vector a minus b pointing from the tip of b to the tip of a">
+  <defs>
+    <marker id="ah-ind" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5A4FCF"/></marker>
+    <marker id="ah-teal" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#0E8C80"/></marker>
+    <marker id="ah-rose" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#C13A57"/></marker>
+  </defs>
+  <!-- grid -->
+  <g stroke="#EDEAE0" stroke-width="1">
+    <path d="M60,20 V260 M140,20 V260 M220,20 V260 M300,20 V260 M380,20 V260 M20,60 H420 M20,140 H420 M20,220 H420"/>
+  </g>
+  <!-- axes -->
+  <g stroke="#C9C4B6" stroke-width="1.5"><path d="M60,260 H420 M60,20 V260"/></g>
+  <!-- a=[4,2] tip (220,180) ; b=[1,3] tip (100,140) origin (60,260) scale 40, but compress: use origin 60,260 -->
+  <!-- a: origin(60,260) -> (220,180) -->
+  <line x1="60" y1="260" x2="220" y2="180" stroke="#5A4FCF" stroke-width="3" marker-end="url(#ah-ind)"/>
+  <!-- b: origin -> (100,140) -->
+  <line x1="60" y1="260" x2="100" y2="140" stroke="#0E8C80" stroke-width="3" marker-end="url(#ah-teal)"/>
+  <!-- a - b : from tip of b (100,140) to tip of a (220,180) -->
+  <line x1="100" y1="140" x2="220" y2="180" stroke="#C13A57" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#ah-rose)"/>
+  <!-- labels -->
+  <text x="228" y="176" fill="#5A4FCF" font-family="JetBrains Mono, monospace" font-size="15" font-weight="600">a = [4,2]</text>
+  <text x="66" y="128" fill="#0E8C80" font-family="JetBrains Mono, monospace" font-size="15" font-weight="600">b = [1,3]</text>
+  <text x="150" y="150" fill="#C13A57" font-family="JetBrains Mono, monospace" font-size="15" font-weight="600">a − b</text>
+  <circle cx="60" cy="260" r="3" fill="#26252E"/>
+</svg>
+<div class="dcap" style="margin-top:10px">The difference a − b is the arrow from b's tip to a's tip</div>
+</div>
+<figcaption><strong>Figure 2 — Subtraction, geometrically.</strong> <b>a − b</b> (dashed rose) starts where <b>b</b> ends and points to where <b>a</b> ends. Its <em>length</em> is the distance between the two points; its <em>direction</em> is "how to get from b to a." Prediction error and gradient direction both live in this one picture.</figcaption>
+</figure>
+
+<!-- ════════════ 4 ════════════ -->
+<h2 id="s4"><span class="num">Section 4</span>How big is a vector? Norms <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §3.1</a></h2>
+
+<p>The <strong>magnitude</strong> (or <strong>norm</strong>) of a vector is its length. The default — the one people mean when they just say "length" or write $\lVert\mathbf{v}\rVert$ — is the <strong>$L_2$ norm</strong>, which is Pythagoras extended to any number of dimensions:</p>
+<div class="mathband">$$ \lVert \mathbf{v} \rVert_2 = \sqrt{v_1^2 + v_2^2 + \dots + v_n^2} \qquad \lVert[4,2]\rVert_2 = \sqrt{16+4} = \sqrt{20} \approx 4.47 $$</div>
+
+<p>But $L_2$ is not the only way to measure size, and the alternatives are not academic — they show up as the two most common forms of <strong>regularization</strong>:</p>
+
+<aside class="side"><span class="lbl">Thread forward</span>When you add a norm of the <em>weight</em> vector to a loss, you get regularization: <b>L2 → Ridge</b> (shrinks weights smoothly), <b>L1 → Lasso</b> (drives some weights to exactly 0 → feature selection). Same norms, different geometry, different behaviour. Returns in the ML-theory track.</aside>
+
+<ul>
+  <li><strong>$L_2$ (Euclidean):</strong> $\sqrt{\sum v_i^2}$. Straight-line distance. Behind Ridge regression.</li>
+  <li><strong>$L_1$ (Manhattan / taxicab):</strong> $\sum |v_i|$. Distance if you can only move along axes. Behind Lasso, and it encourages <em>sparsity</em>.</li>
+  <li><strong>$L_\infty$ (max):</strong> $\max_i |v_i|$. The single largest component. Used in some robustness bounds.</li>
+</ul>
+
+<details class="deeper"><summary>Going deeper — what makes something a "norm"?</summary><div class="deep-body">
+  <p>We've been calling these "ways to measure size," but a <strong>norm</strong> has a precise definition. A function $\lVert\cdot\rVert:\mathbb{R}^n\to\mathbb{R}$ is a norm if, for all vectors $\mathbf{x},\mathbf{y}$ and scalars $\lambda$, it satisfies three axioms:</p>
+  <div class="mathband">$$ \begin{aligned}
+    &\text{1. Positive definite:} && \lVert\mathbf{x}\rVert \ge 0, \text{ and } =0 \iff \mathbf{x}=\mathbf{0} \\
+    &\text{2. Absolutely homogeneous:} && \lVert\lambda\mathbf{x}\rVert = |\lambda|\,\lVert\mathbf{x}\rVert \\
+    &\text{3. Triangle inequality:} && \lVert\mathbf{x}+\mathbf{y}\rVert \le \lVert\mathbf{x}\rVert + \lVert\mathbf{y}\rVert
+  \end{aligned} $$</div>
+  <p>$L_2$, $L_1$, and $L_\infty$ all satisfy these — which is <em>why</em> they're interchangeable notions of length, each valid, just measuring differently. Axiom 2 is exactly why scalar multiplication scales length (Section 3), and axiom 3 says "a detour is never shorter than the direct path." <span class="secs">Formal treatment: <b>MML §3.1</b>.</span></p>
+</div></details>
+
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 460 260" role="img" aria-label="Interactive: morph between L1 taxicab and L2 straight-line distance to the point 4,3">
+  <g stroke="#EDEAE0" stroke-width="1">
+    <path d="M60,20 V220 M140,20 V220 M220,20 V220 M300,20 V220 M380,20 V220 M20,60 H420 M20,140 H420"/>
+  </g>
+  <g stroke="#C9C4B6" stroke-width="1.5"><path d="M60,220 H420 M60,20 V220"/></g>
+  <!-- faint references -->
+  <path d="M60,220 H220 V100" fill="none" stroke="#E4C79A" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="60" y1="220" x2="220" y2="100" stroke="#C3BCF0" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <!-- morphing path (updated by slider) -->
+  <path id="morphPath" d="M60,220 H220 V100" fill="none" stroke="#B07514" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="60" cy="220" r="3.5" fill="#26252E"/>
+  <circle cx="220" cy="100" r="5" fill="#26252E"/>
+  <text x="226" y="98" fill="#26252E" font-family="JetBrains Mono, monospace" font-size="14">[4, 3]</text>
+</svg>
+<div class="slider-row">
+  <span>L1&nbsp;<span style="color:#B07514">(taxicab)</span></span>
+  <input type="range" id="pSlider" min="1" max="2" step="0.05" value="1">
+  <span>L2&nbsp;<span style="color:#5A4FCF">(straight)</span></span>
+</div>
+<div class="dcap" style="margin-top:10px">p = <span id="pVal" style="color:var(--accent)">1.0</span> &nbsp;·&nbsp; distance = <span id="distVal" style="color:var(--accent)">7.00</span> &nbsp; <span style="color:var(--faint)">(|4|ᵖ + |3|ᵖ)^(1/p)</span></div>
+</div>
+<figcaption><strong>Figure 3 — L2 vs L1 (drag the slider).</strong> To reach <code>[4,3]</code>, the <b>L2</b> norm takes the straight diagonal — length 5. The <b>L1</b> norm can only move along axes, like a taxi on a grid — length 4 + 3 = 7. Slide between them to watch the distance change. That "corners, not diagonals" geometry is exactly why <b>L1 regularization drives weights to zero</b> (sparsity) while L2 shrinks them smoothly.</figcaption>
+</figure>
+
+<h3>Unit vectors: length without magnitude</h3>
+<p>Dividing a vector by its own norm gives a <strong>unit vector</strong> — same direction, length exactly 1:</p>
+<div class="mathband">$$ \hat{\mathbf{v}} = \frac{\mathbf{v}}{\lVert\mathbf{v}\rVert} $$</div>
+<p>You <strong>normalize</strong> whenever you care about direction and not size — the canonical case being text embeddings, where two documents are "similar" if their vectors <em>point</em> the same way, regardless of length. There is exactly one landmine here: the <strong>zero vector has no direction</strong>, so normalizing it divides by zero and yields <code>nan</code>. Guard for it every single time.</p>
+
+<!-- ════════════ 5 ════════════ -->
+<h2 id="s5"><span class="num">Section 5</span>How far apart are two vectors? <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §3.3</a></h2>
+
+<p>Combine the last two ideas — subtraction gives a difference vector, the norm gives its length — and you get <strong>distance</strong>:</p>
+<div class="mathband">$$ \text{dist}(\mathbf{a},\mathbf{b}) = \lVert \mathbf{a}-\mathbf{b} \rVert = \sqrt{\sum_i (a_i-b_i)^2} $$</div>
+<p>This one formula is the beating heart of a surprising amount of ML: <strong>k-nearest-neighbours</strong> classifies a point by the labels of the closest points; <strong>k-means</strong> clusters by assigning each point to its nearest centre; retrieval systems (including a naive version of OpsRAG) rank documents by distance to the query vector. "Similar" almost always cashes out as "close," and "close" almost always cashes out as the norm of a difference.</p>
+
+<!-- ════════════ 6 ════════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Doing it in NumPy — and why NumPy</h2>
+
+<p>Everything above is one line each in NumPy, and the fact that it is one line — not a loop — is itself a lesson.</p>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+a = np.array([<span class="n">4</span>, <span class="n">2</span>], dtype=<span class="k">float</span>)
+b = np.array([<span class="n">1</span>, <span class="n">3</span>], dtype=<span class="k">float</span>)
+
+<span class="f">print</span>(a + b)                 <span class="c"># [5. 5.]  component-wise add</span>
+<span class="f">print</span>(<span class="n">2</span> * a)                 <span class="c"># [8. 4.]  scalar multiply</span>
+<span class="f">print</span>(np.linalg.norm(a))      <span class="c"># 4.4721   L2 magnitude</span>
+<span class="f">print</span>(np.linalg.norm(a, <span class="n">1</span>))   <span class="c"># 6.0      L1 (Manhattan)</span>
+<span class="f">print</span>(a / np.linalg.norm(a))   <span class="c"># unit vector, length 1</span>
+<span class="f">print</span>(np.linalg.norm(a - b))  <span class="c"># 3.1623   distance between points</span></pre>
+<div class="out">[5. 5.]
+[8. 4.]
+4.47213595499958
+6.0
+[0.89442719 0.4472136 ]
+3.1622776601683795</div>
+
+<div class="callout c-good"><span class="tag">Vectorization — verified</span>
+Notice there is no <code>for</code> loop anywhere. NumPy applies each operation to the whole array at once, in compiled C, over contiguous memory. On a million-element vector this is <strong>10–100× faster</strong> than a Python loop and reads far cleaner. "Vectorize your code" — the advice you will hear constantly — literally means "express it as whole-array operations like these instead of element-by-element loops."</div>
+
+<div class="callout c-warn"><span class="tag">Broadcasting — convenient, and a trap</span>
+<code>a + 10</code> does not error — NumPy <em>broadcasts</em> the scalar and adds 10 to every component. Powerful, but it also means a genuine shape mistake can silently produce a plausible-looking wrong answer. When a result looks off, print <code>.shape</code> before anything else.</div>
+
+<!-- ════════════ 7 ════════════ -->
+<h2 id="s7"><span class="num">Section 7</span>Feature scaling, in one worked example</h2>
+
+<p>Here is the most important practical consequence of everything above, and a favourite interview probe. Two houses, each described by <code>[square_feet, bedrooms]</code>:</p>
+<div class="mathband">$$ \mathbf{h_1}=[1200,\,3], \quad \mathbf{h_2}=[1400,\,2], \quad \text{dist} = \sqrt{200^2 + 1^2} = \sqrt{40001} \approx 200.0 $$</div>
+<p>The distance is <strong>200.0</strong> — and the bedroom difference contributed a laughable <code>1</code> out of that. Square footage, measured in the thousands, completely dominates; bedrooms may as well not exist. A distance-based model would treat two houses as "similar" based on square footage <em>alone</em>. Now rescale square footage into thousands:</p>
+<div class="mathband">$$ \mathbf{h_1}=[1.2,\,3], \quad \mathbf{h_2}=[1.4,\,2], \quad \text{dist} = \sqrt{0.2^2 + 1^2} = \sqrt{1.04} \approx 1.02 $$</div>
+<figure class="diagram"><div class="dgrid">
+  <div class="frame">
+    <div class="dcap">Before scaling · distance contribution</div>
+    <svg viewBox="0 0 300 150" role="img" aria-label="Before scaling, square footage dominates the distance">
+      <text x="10" y="45" font-family="Inter, sans-serif" font-size="12" fill="#26252E">sqft</text>
+      <rect x="70" y="32" width="220" height="22" rx="4" fill="#5A4FCF"/>
+      <text x="10" y="100" font-family="Inter, sans-serif" font-size="12" fill="#26252E">beds</text>
+      <rect x="70" y="88" width="2" height="22" rx="1" fill="#0E8C80"/>
+      <text x="78" y="104" font-family="JetBrains Mono, monospace" font-size="11" fill="#9C99A6">≈ 1</text>
+      <text x="70" y="140" font-family="JetBrains Mono, monospace" font-size="11" fill="#C13A57">sqft is 200× louder</text>
+    </svg>
+  </div>
+  <div class="frame">
+    <div class="dcap">After scaling · distance contribution</div>
+    <svg viewBox="0 0 300 150" role="img" aria-label="After scaling, both features contribute comparably">
+      <text x="10" y="45" font-family="Inter, sans-serif" font-size="12" fill="#26252E">sqft</text>
+      <rect x="70" y="32" width="60" height="22" rx="4" fill="#5A4FCF"/>
+      <text x="10" y="100" font-family="Inter, sans-serif" font-size="12" fill="#26252E">beds</text>
+      <rect x="70" y="88" width="150" height="22" rx="4" fill="#0E8C80"/>
+      <text x="70" y="140" font-family="JetBrains Mono, monospace" font-size="11" fill="#0E8C80">comparable footing</text>
+    </svg>
+  </div>
+</div>
+<figcaption><strong>Figure 4 — Why <code>StandardScaler</code> comes first.</strong> Left: with raw units, square footage's contribution to the distance dwarfs bedrooms — the model is effectively blind to bedroom count. Right: after scaling, both features get a fair say. This is the single most common preprocessing step in applied ML.</figcaption>
+</figure>
+
+<p>Now bedrooms dominate. Neither raw scale is "correct" — which is the point. <strong>Feature scaling</strong> (standardization or min-max normalization) puts every feature on comparable footing <em>before</em> any distance is computed, so the model weighs them by importance rather than by accident of units. This is why <code>StandardScaler</code> sits at the front of nearly every scikit-learn pipeline you'll write — including the ones already in your fraud and churn projects.</p>
+
+<!-- ════════════ 8 ════════════ -->
+<h2 id="s8"><span class="num">Section 8</span>High dimensions & the intuition tax</h2>
+<p>Two honest warnings about $\mathbb{R}^n$ for large $n$, so the geometry doesn't mislead you:</p>
+<ul>
+  <li><strong>You lose the picture, keep the algebra.</strong> Every formula here holds in 784-D; your <em>visualization</em> of it does not. Trust the algebra, distrust the mental cartoon.</li>
+  <li><strong>The curse of dimensionality.</strong> As $n$ grows, points spread out until <em>everything is roughly equidistant from everything</em> — distances lose contrast, and "nearest neighbour" becomes barely meaningful. This is precisely why dimensionality reduction (PCA, Session 7) and learned low-dimensional embeddings exist: fewer, better dimensions beat many raw ones.</li>
+</ul>
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">You have features <code>age</code> (0–90) and <code>income</code> (0–200,000). You run KNN on the raw values. What happens?</div>
+  <button class="opt">Age dominates the distance because it changes more often.</button>
+  <button class="opt">Income dominates the distance because its raw range is far larger.</button>
+  <button class="opt">Both contribute equally — KNN handles scale automatically.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">When do you normalize a vector to length 1 rather than keep its magnitude?</div>
+  <button class="opt">Always — length 1 is required by every model.</button>
+  <button class="opt">Never — magnitude is always the useful signal.</button>
+  <button class="opt">When only <em>direction</em> matters, e.g. comparing text embeddings by orientation.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════ EDGE / RULES / TRAPS ════════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules & traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Zero vector</strong> $[0,\dots,0]$ has magnitude 0 and no direction — normalizing it is undefined (<code>nan</code>).</li>
+  <li><strong>Dimension mismatch:</strong> you cannot add $[1,2]$ to $[1,2,3]$. Shapes must match (or broadcast deliberately).</li>
+  <li><strong>Row vs column:</strong> math writes column vectors; a NumPy 1-D array has shape <code>(n,)</code> — neither row nor column until reshaped. This will bite in matrix multiply (Session 4).</li>
+  <li><strong>Integer dtype:</strong> <code>np.array([1,2]); a /= 3</code> truncates on an int array. Use <code>float</code> for ML.</li>
+</ul>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Silent broadcasting</span><code>vec + 10</code> or a <code>(3,)</code> plus a <code>(3,1)</code> won't error — they produce a shape you didn't intend. Print <code>.shape</code> first when debugging.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Normalizing the zero vector</span>Always check <code>norm &gt; 0</code> before dividing, or you'll silently inject <code>nan</code>s that poison every downstream computation.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Comparing unscaled features</span>Any distance, KNN, or K-means on raw features is dominated by whichever feature has the largest units. Scale first — always.</div>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>A vector carries <strong>magnitude and direction</strong> — almost every question is really about one or the other.</li>
+  <li>Add and subtract are <strong>component-wise</strong>; the shapes must match (or broadcast deliberately).</li>
+  <li>Scalar multiplication changes <strong>length, not direction</strong> (a negative flips it, zero collapses it).</li>
+  <li><strong>Normalize</strong> when only direction matters — and guard the zero vector first.</li>
+  <li><strong>Distance = ‖a − b‖</strong> — the norm of the difference vector.</li>
+  <li>Prefer one <strong>vectorized</strong> NumPy operation over any element-wise loop.</li>
+</ol>
+
+<hr class="divider">
+
+<!-- ════════════ EXERCISES ════════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve them in the paired <code>practice.ipynb</code>, verifying each against your by-hand answer.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Given <code>a=[2,-1,4]</code>, <code>b=[0,3,1]</code>: compute <code>a+b</code>, <code>3a</code>, <code>a−b</code> by hand, then verify in NumPy.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Component-wise: <code>a+b = [2, 2, 5]</code>, &nbsp;<code>3a = [6, -3, 12]</code>, &nbsp;<code>a−b = [2, -4, 3]</code>.</p>
+    <pre class="code">a = np.array([<span class="n">2</span>,<span class="n">-1</span>,<span class="n">4</span>]); b = np.array([<span class="n">0</span>,<span class="n">3</span>,<span class="n">1</span>])
+a+b   <span class="c"># [2 2 5]</span>
+<span class="n">3</span>*a   <span class="c"># [ 6 -3 12]</span>
+a-b   <span class="c"># [ 2 -4  3]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Compute <code>‖[6,8]‖₂</code> by hand.<span class="hint">It's a clean integer — a Pythagorean triple.</span></p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\sqrt{6^2+8^2}=\sqrt{36+64}=\sqrt{100}=\mathbf{10}$. The 6-8-10 triple (a scaled 3-4-5).</p>
+    <pre class="code">np.linalg.norm([<span class="n">6</span>,<span class="n">8</span>])   <span class="c"># 10.0</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Write <code>unit(v)</code> that normalizes a vector but returns the zero vector unchanged instead of <code>nan</code>.<span class="hint">Check the norm before dividing.</span></p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="k">def</span> <span class="f">unit</span>(v):
+    v = np.asarray(v, dtype=<span class="k">float</span>)
+    n = np.linalg.norm(v)
+    <span class="k">return</span> v <span class="k">if</span> n == <span class="n">0</span> <span class="k">else</span> v / n
+
+unit([<span class="n">3</span>,<span class="n">4</span>])     <span class="c"># [0.6 0.8]  (length 1)</span>
+unit([<span class="n">0</span>,<span class="n">0</span>])     <span class="c"># [0. 0.]    (no nan)</span></pre>
+    <p>The guard <code>n == 0</code> is the whole point — without it you divide by zero and poison everything downstream.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Reproduce Section 7: compute the house distance before and after scaling sqft to thousands. Explain in one sentence why the "closest" house flips.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">h1 = np.array([<span class="n">1200</span>,<span class="n">3</span>]); h2 = np.array([<span class="n">1400</span>,<span class="n">2</span>])
+np.linalg.norm(h1-h2)                    <span class="c"># 200.0025  -> sqft dominates</span>
+
+s1 = np.array([<span class="n">1.2</span>,<span class="n">3</span>]);  s2 = np.array([<span class="n">1.4</span>,<span class="n">2</span>])
+np.linalg.norm(s1-s2)                    <span class="c"># 1.0198   -> bedrooms dominate</span></pre>
+    <p><strong>Why it flips:</strong> Euclidean distance is driven by whichever feature has the largest raw spread, so rescaling changes which feature "wins" and therefore which points count as nearest.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Without <code>np.linalg.norm</code>, compute the magnitude of a length-1000 random vector using only <code>np.dot</code>.<span class="hint">‖v‖ = √(v · v). This identity is the doorway to Session 2.</span></p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">rng = np.random.default_rng(<span class="n">0</span>)
+v = rng.standard_normal(<span class="n">1000</span>)
+mag = np.sqrt(np.dot(v, v))
+mag, np.allclose(mag, np.linalg.norm(v))   <span class="c"># (~31.6, True)</span></pre>
+    <p>A vector dotted with itself is the sum of its squared components — i.e. $\lVert v\rVert^2$. Take the square root and you have the norm. Session 2 generalizes <code>v·w</code> to <em>any</em> pair.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════ ML + INTERVIEW ════════════ -->
+<h2 id="ml"><span class="num">Payoff</span>Where this lives in real ML</h2>
+<ul>
+  <li><strong>Features are vectors.</strong> Every row in your fraud/churn projects was a point in $\mathbb{R}^n$; the model learned a decision surface over that space.</li>
+  <li><strong>Embeddings are vectors.</strong> OpsRAG maps each answer to a ~384-D vector; "similar meaning" = "nearby direction" (Session 2's dot product).</li>
+  <li><strong>Images are vectors.</strong> Your defect-detection images are long vectors before a CNN gives them structure.</li>
+  <li><strong>Weights are vectors, gradients are vectors.</strong> Training = repeatedly nudging a weight vector along the negative gradient (Sessions 8–9).</li>
+</ul>
+
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · Magnitude vs direction — when do you care about each?</div><div class="a">Direction for semantic similarity (embeddings → cosine); magnitude when scale is meaningful (raw distance, gradient step size, regularization penalty).</div></div>
+<div class="qa"><div class="q">Q2 · Why scale features before a distance-based model?</div><div class="a">Large-unit features dominate Euclidean distance regardless of importance, so the model effectively ignores small-unit features. Scaling equalizes their influence. (See Section 7.)</div></div>
+<div class="qa"><div class="q">Q3 · Difference between L1 and L2 norms, and why an ML engineer cares?</div><div class="a">L2 = √Σvᵢ² (straight line), L1 = Σ|vᵢ| (taxicab). As regularizers: L2→Ridge (smooth shrinkage), L1→Lasso (sparsity / feature selection).</div></div>
+<div class="qa"><div class="q">Q4 · A 28×28 image as a vector — dimension, and the consequence?</div><div class="a">784-D. High dimensionality triggers the curse of dimensionality (distances lose contrast), motivating PCA and learned embeddings.</div></div>
+<div class="qa"><div class="q">Q5 · What does normalizing do, and when is it undefined?</div><div class="a">Scales to length 1, preserving direction (projects onto the unit sphere). Undefined for the zero vector.</div></div>
+
+<hr class="divider">
+
+<!-- ════════════ SUMMARY ════════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Vector = ordered numbers</td><td>Every row, embedding, image, weight-set is one</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Point vs arrow vs data</td><td>Lets ML treat tables as geometry</td><td class="freq f-h">High</td></tr>
+  <tr><td>Addition / scalar mult.</td><td>Linear models; the gradient-descent update step</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Difference vector</td><td>Error signals and separation between points</td><td class="freq f-h">High</td></tr>
+  <tr><td>L2 / L1 / L∞ norms</td><td>Length, distance, and Ridge vs Lasso regularization</td><td class="freq f-h">High</td></tr>
+  <tr><td>Normalization</td><td>Direction-only comparison (embeddings)</td><td class="freq f-h">High</td></tr>
+  <tr><td>Distance = ‖a−b‖</td><td>KNN, K-means, retrieval ranking</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Feature scaling</td><td>Stops large-unit features hijacking distance</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Vectorization</td><td>Fast, clean NumPy — the floor of every ML lib</td><td class="freq f-m">Medium</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../02_dot_product/theory.html" style="border:0;color:inherit">02 · Dot product &amp; similarity →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">We take these two arrows and ask <em>how aligned are they?</em> — one multiply-and-sum that powers search, recommendations, cosine similarity, and the attention mechanism inside every transformer. You already met it in Figure 1, waiting to hit zero at a right angle.</p>
+</div>
