@@ -213,6 +213,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 03 — Matrices as transformations** (drag-the-basis transformation visualizer, MML §2.2/2.7/4.1 + linearity & det=0 deep-dives).
 - ✅ **Session 04 — Matrix multiplication** (compose-two-transformations visualizer with order swap + play, MML §2.2/2.7 + row×col-is-composition & associativity deep-dives).
 - ✅ **Session 05 — Span, basis, rank & independence** (drag-two-vectors span/rank visualizer with lattice collapse, MML §2.4/2.5/2.6 + independence-def & row=col-rank deep-dives).
+- ✅ **Session 06 — Eigenvalues & eigenvectors** (drag-v-watch-Av eigenline finder with matrix presets incl. rotation, MML §4.2/4.4 + char-poly & diagonalization deep-dives).
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 - ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).

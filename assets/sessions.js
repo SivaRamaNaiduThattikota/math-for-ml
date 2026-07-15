@@ -12,7 +12,7 @@ window.MFML_SESSIONS = [
   ["la","03","03_matrices","Matrices as transformations","Grids of numbers that move, rotate, and stretch entire spaces.",true],
   ["la","04","04_matrix_multiplication","Matrix multiplication","Composing transformations — the single most-run operation in ML.",true],
   ["la","05","05_span_basis_rank","Span, basis, rank & independence","The shape of a vector space — why features are redundant, and what rank measures.",true],
-  ["la","06","06_eigenvalues","Eigenvalues & eigenvectors","The directions a matrix only stretches — the axes it leaves alone.",false],
+  ["la","06","06_eigenvalues","Eigenvalues & eigenvectors","The directions a matrix only stretches — the axes it leaves alone.",true],
   ["la","07","07_svd_pca","SVD, PCA & low-rank","The master decomposition — behind PCA, recommenders, and LoRA.",false],
   ["calc","08","08_derivatives","Derivatives & gradients","How a function changes — the slope that learning follows.",false],
   ["calc","09","09_partial_derivatives","Partial derivatives & the Jacobian","Slopes in many directions at once; the gradient vector.",false],

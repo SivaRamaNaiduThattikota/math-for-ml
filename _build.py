@@ -66,7 +66,15 @@ SESSIONS = [
               ("s3","3 · Basis & dimension"),("s4","4 · Rank"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 06–18 get appended here as each _content.html is authored.
+    dict(num="06", slug="06_eigenvalues", title="Eigenvalues & eigenvectors",
+         lede="Some directions a matrix only stretches, never turns — its eigenvectors. "
+              "Find them and you find what the transformation really does.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Matrices, Rank"],
+         toc=[("s1","1 · The eigen equation"),("s2","2 · Eigenvalue = stretch"),
+              ("s3","3 · Finding them"),("s4","4 · Special cases"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 07–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Eigenvalues & eigenvectors · Math for ML</title>
+<meta name="description" content="Some directions a matrix only stretches, never turns — its eigenvectors. Find them and you find what the transformation really does.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Eigenvalues & eigenvectors · Math for ML">
+<meta property="og:description" content="Some directions a matrix only stretches, never turns — its eigenvectors. Find them and you find what the transformation really does.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="06_eigenvalues">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · The eigen equation</a>
+  <a href="#s2">2 · Eigenvalue = stretch</a>
+  <a href="#s3">3 · Finding them</a>
+  <a href="#s4">4 · Special cases</a>
+  <a href="#s5">5 · NumPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Linear Algebra · 06</div>
+    <h1>Eigenvalues & eigenvectors</h1>
+    <p class="lede">Some directions a matrix only stretches, never turns — its eigenvectors. Find them and you find what the transformation really does.</p>
+    <div class="meta"><span>~20 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: Matrices, Rank</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">A matrix pushes every vector somewhere new — rotating, stretching, shearing. But for most matrices there are a few <em>special</em> directions that come through the transformation <strong>pointing the exact same way</strong>, merely stretched or shrunk. Those directions are the matrix's <strong>eigenvectors</strong>, and the amount each is stretched is its <strong>eigenvalue</strong>. Find them and you've found what the transformation <em>really does</em>, stripped of all the swirl.</p>
+
+<p>This is not a niche trick. The principal directions in PCA, the ranking vector in PageRank, the stable modes of a dynamical system, the axes a covariance matrix stretches — all are eigenvectors. Session 7 (SVD & PCA) is built directly on this one.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>State the eigen equation $A\mathbf{v}=\lambda\mathbf{v}$ and read it as "a direction the matrix only scales."</li>
+    <li>Interpret an eigenvalue $\lambda$ as a stretch factor — and what $\lambda>1$, $0<\lambda<1$, $\lambda<0$, $\lambda=0$ mean.</li>
+    <li>Find eigenvalues of a 2×2 via the characteristic equation $\det(A-\lambda I)=0$.</li>
+    <li>Know why a rotation has <em>no real</em> eigenvectors, and why <strong>symmetric</strong> matrices have orthogonal ones.</li>
+    <li>Connect eigenvectors to PCA (covariance) and PageRank.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§4.2 Eigenvalues &amp; Eigenvectors, §4.4 Eigendecomposition &amp; Diagonalization</span>. We build the geometric picture; those sections give the algebra and proofs.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">The eigen equation</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Eigenvalue = stretch</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Finding them</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Special cases</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\mathbf{v}$</span><span class="def">An eigenvector — a non-zero direction the matrix only scales.</span>
+    <span class="sym">$\lambda$</span><span class="def">Its eigenvalue — the scaling factor (lambda).</span>
+    <span class="sym">$A\mathbf{v}=\lambda\mathbf{v}$</span><span class="def">The eigen equation: transformed = scaled original.</span>
+    <span class="sym">$\det(A-\lambda I)=0$</span><span class="def">The characteristic equation — solve it for the eigenvalues.</span>
+    <span class="sym">$A=PDP^{-1}$</span><span class="def">Eigendecomposition — diagonal in the eigenvector basis.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>The eigen equation <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §4.2</a></h2>
+
+<p>A non-zero vector $\mathbf{v}$ is an <strong>eigenvector</strong> of $A$ if applying $A$ just scales it — the output lies on the <em>same line</em> as the input:</p>
+
+<div class="mathband">$$ A\mathbf{v} = \lambda\mathbf{v} $$</div>
+
+<p>The scalar $\lambda$ is the <strong>eigenvalue</strong>. Every other vector gets knocked off its line by the transformation; eigenvectors are the ones that hold their direction. In the demo, drag the input vector around and hunt for the directions where the output arrow lines up perfectly with the input.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="eplay" width="880" height="470"></canvas>
+    <div class="ctrlrow"><span class="lbl2">Matrix A:</span>
+      <button class="ctrl" data-key="sym">Symmetric</button>
+      <button class="ctrl" data-key="diag">Diagonal</button>
+      <button class="ctrl" data-key="shear">Shear</button>
+      <button class="ctrl" data-key="rot">Rotation</button>
+    </div>
+    <div class="readout">
+      <span><span class="k">A</span> = <span class="vd" id="rMat">…</span></span>
+      <span><span class="k">eigenvalues</span> = <span class="vs" id="rEig">…</span></span>
+      <span><span class="k">angle(v, Av)</span> = <span class="vd" id="rAngle">…</span></span>
+      <span id="rStatus" class="vb">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Drag <b>v</b> (indigo); the amber arrow is <b>Av</b>.</strong> The faint dashed lines are the true eigenvector directions. When you drag <b>v</b> onto one of them, <b>Av</b> snaps to the same line — the angle between them hits 0° (or 180°) and the readout confirms an eigenvector plus its $\lambda$. Switch to <b>Rotation</b>: the arrows <em>never</em> align (every direction turns), so there are no real eigenvectors at all.</figcaption>
+</figure>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Think of a transformation as a process that reshuffles your data cloud. Most features get mixed together. Eigenvectors are the <em>natural axes</em> of that process — the combinations that stay pure, only growing or shrinking. Later (PCA) these become the "principal components": the handful of directions that capture how your data actually varies.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The eigenvalue is a stretch factor</h2>
+
+<p>Once a direction is fixed, the eigenvalue tells you what happens <em>along</em> it:</p>
+<ul>
+  <li><strong>$\lambda > 1$</strong> — stretched (the direction grows). <strong>$\lambda = 1$</strong> — unchanged.</li>
+  <li><strong>$0 < \lambda < 1$</strong> — shrunk toward the origin.</li>
+  <li><strong>$\lambda < 0$</strong> — flipped to the opposite side (and scaled by $|\lambda|$).</li>
+  <li><strong>$\lambda = 0$</strong> — collapsed to the origin. A zero eigenvalue means the matrix squashes that direction to nothing — exactly the rank-deficient, $\det=0$, non-invertible case from Session 5.</li>
+</ul>
+
+<div class="callout c-good"><span class="tag">Two facts that fall out for free</span>
+For any square matrix: the <strong>product of the eigenvalues equals the determinant</strong> ($\prod\lambda_i = \det A$ — so a zero eigenvalue ⇒ $\det=0$), and the <strong>sum of the eigenvalues equals the trace</strong> ($\sum\lambda_i = \operatorname{tr}A$, the diagonal sum). Great sanity checks when you compute them.</div>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Finding eigenvalues: the characteristic equation</h2>
+
+<p>Rearrange the eigen equation: $A\mathbf{v}=\lambda\mathbf{v}$ becomes $(A-\lambda I)\mathbf{v}=\mathbf{0}$. For a <em>non-zero</em> $\mathbf{v}$ to satisfy this, the matrix $A-\lambda I$ must collapse a direction — i.e. it must be singular:</p>
+
+<div class="mathband">$$ \det(A-\lambda I) = 0 $$</div>
+
+<p>For a 2×2 this expands to a tidy quadratic in $\lambda$ (using trace and determinant from Sessions 3 & 5):</p>
+<div class="mathband">$$ \lambda^2 - (\operatorname{tr}A)\,\lambda + \det A = 0 $$</div>
+
+<p>Worked example on the symmetric matrix $A=\begin{bmatrix}2&1\\1&2\end{bmatrix}$: $\operatorname{tr}=4$, $\det=3$, so $\lambda^2-4\lambda+3=0 \Rightarrow \lambda=1,\,3$. The eigenvectors come from plugging each $\lambda$ back into $(A-\lambda I)\mathbf{v}=\mathbf{0}$: $\lambda=3\to[1,1]$, $\lambda=1\to[1,-1]$.</p>
+
+<details class="deeper"><summary>Going deeper — why det(A − λI) = 0</summary><div class="deep-body">
+  <p>$(A-\lambda I)\mathbf{v}=\mathbf{0}$ asks: is there a non-zero vector that $A-\lambda I$ sends to the origin? From Session 5, a matrix sends a non-zero vector to $\mathbf{0}$ <em>only if it's rank-deficient</em> — which for a square matrix means $\det=0$. So the eigenvalues are exactly the $\lambda$ that make $A-\lambda I$ singular. Expanding $\det(A-\lambda I)$ gives the <strong>characteristic polynomial</strong>; its roots are the eigenvalues. For $n\times n$ it has degree $n$, so there are $n$ eigenvalues (counting complex ones and multiplicities). <span class="secs">See <b>MML §4.2</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Rotations, symmetry & diagonalization</h2>
+
+<p><strong>Rotations have no real eigenvectors.</strong> A pure rotation turns <em>every</em> direction, so none is preserved — the characteristic equation has no real roots (its eigenvalues are complex). That's not a failure; it's the algebra correctly reporting "nothing holds still here." The demo's Rotation preset shows it.</p>
+
+<p><strong>Symmetric matrices are the good case</strong> — and the one ML lives in. If $A=A^\top$, then all its eigenvalues are <em>real</em> and its eigenvectors are <em>orthogonal</em> (perpendicular). This is the <strong>spectral theorem</strong>, and it matters enormously: the <em>covariance matrix</em> at the heart of PCA is symmetric, so it always has clean, perpendicular principal axes.</p>
+
+<details class="deeper"><summary>Going deeper — diagonalization: A = P D P⁻¹</summary><div class="deep-body">
+  <p>Stack the eigenvectors as columns of a matrix $P$ and the eigenvalues on the diagonal of $D$. Then:</p>
+  <div class="mathband">$$ A = P\,D\,P^{-1} $$</div>
+  <p>Read right-to-left as a pipeline: $P^{-1}$ rewrites a vector in the eigenvector basis (Session 5's change of coordinates), $D$ simply <em>scales</em> each axis by its eigenvalue, and $P$ maps back. In the right basis, a complicated transformation is just independent stretching. That's why eigenvectors reveal "what a matrix really does," and it's the direct ancestor of the SVD in Session 7. <span class="secs">See <b>MML §4.4</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+A = np.array([[<span class="n">2</span>, <span class="n">1</span>], [<span class="n">1</span>, <span class="n">2</span>]], dtype=<span class="k">float</span>)
+vals, vecs = np.linalg.eig(A)      <span class="c"># eigenvalues and (column) eigenvectors</span>
+<span class="f">print</span>(vals)                       <span class="c"># [3. 1.]</span>
+<span class="f">print</span>(vecs)                       <span class="c"># columns: [0.707,0.707], [-0.707,0.707]</span>
+
+<span class="c"># verify the eigen equation for the first pair</span>
+<span class="f">print</span>(A &#64; vecs[:, <span class="n">0</span>], vals[<span class="n">0</span>] * vecs[:, <span class="n">0</span>])   <span class="c"># equal</span>
+
+<span class="f">print</span>(vals.sum(), np.trace(A))   <span class="c"># 4.0 4.0  (sum = trace)</span>
+<span class="f">print</span>(vals.prod(), np.linalg.det(A))  <span class="c"># 3.0 3.0  (product = det)</span></pre>
+<div class="out">[3. 1.]
+[[ 0.70710678 -0.70710678]
+ [ 0.70710678  0.70710678]]
+[2.12132034 2.12132034] [2.12132034 2.12132034]
+4.0 4.0
+3.0 3.0</div>
+
+<div class="callout c-warn"><span class="tag">eig returns columns, and may be complex</span>
+<code>np.linalg.eig</code> returns eigenvectors as the <em>columns</em> of the second array (use <code>vecs[:, i]</code>, not <code>vecs[i]</code>), and they're normalized to length 1. For non-symmetric matrices the results can be complex. For symmetric matrices, prefer <code>np.linalg.eigh</code> — it's faster and guarantees real, orthogonal results.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>PCA (Session 7).</strong> The principal components are the eigenvectors of the data's covariance matrix; each eigenvalue is the <em>variance</em> captured along that direction. Keep the top-$k$ eigenvectors → compress with minimal information loss.</li>
+  <li><strong>PageRank.</strong> The importance scores are the dominant eigenvector of the web's link matrix — repeatedly applying the matrix converges to it (power iteration).</li>
+  <li><strong>Spectral clustering &amp; graph ML.</strong> Eigenvectors of the graph Laplacian reveal community structure.</li>
+  <li><strong>Stability &amp; dynamics.</strong> Whether repeated application $A^k\mathbf{x}$ blows up or settles is governed entirely by the eigenvalues' magnitudes.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Eigenvectors are the directions a matrix leaves alone; eigenvalues say by how much it scales them. Diagonalizing = viewing the transformation in the basis where it's just scaling — the idea PCA and SVD (Session 7) turn into compression.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Eigenvectors aren't unique:</strong> any non-zero scalar multiple of an eigenvector is also one (same direction). NumPy returns the unit-length version.</li>
+  <li><strong>Complex eigenvalues</strong> appear for rotations / non-symmetric matrices — real and expected, not an error.</li>
+  <li><strong>Repeated eigenvalues</strong> (e.g. shear) may not give enough independent eigenvectors to diagonalize — such matrices are "defective."</li>
+  <li><strong>$\lambda=0$</strong> ⟺ singular / rank-deficient (Session 5): that direction is collapsed.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>An <strong>eigenvector</strong> keeps its direction under $A$; the <strong>eigenvalue</strong> is how much it's scaled: $A\mathbf{v}=\lambda\mathbf{v}$.</li>
+  <li>Find eigenvalues via $\det(A-\lambda I)=0$; for 2×2, $\lambda^2-(\operatorname{tr})\lambda+\det=0$.</li>
+  <li><strong>$\sum\lambda=\operatorname{tr}A$, $\prod\lambda=\det A$</strong> — use as sanity checks.</li>
+  <li><strong>Symmetric ⇒ real, orthogonal eigenvectors</strong> (spectral theorem) — the PCA case.</li>
+  <li>$A=PDP^{-1}$: in the eigenvector basis, the transformation is just scaling.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Reading eigenvectors as rows</span>
+<code>np.linalg.eig</code> puts eigenvectors in <em>columns</em>. Use <code>vecs[:, i]</code>. Grabbing <code>vecs[i]</code> silently gives the wrong vector.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Expecting real eigenvalues always</span>
+Non-symmetric matrices can have complex eigenvalues. If you need real, orthogonal ones (PCA), your matrix should be symmetric — and use <code>eigh</code>.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Forgetting eigenvectors have arbitrary scale/sign</span>
+Direction is what's determined; length and sign are free. PCA components can flip sign between runs/libraries — don't treat the sign as meaningful.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">$A\mathbf{v} = \lambda\mathbf{v}$ with $\lambda = 0$. What does that mean?</div>
+  <button class="opt">v is stretched to infinity.</button>
+  <button class="opt">A collapses that direction to the origin — A is singular (det = 0).</button>
+  <button class="opt">v is rotated 90°.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">Why do we love symmetric matrices in ML (e.g. covariance)?</div>
+  <button class="opt">They're always invertible.</button>
+  <button class="opt">They have no eigenvalues.</button>
+  <button class="opt">Their eigenvalues are real and eigenvectors orthogonal (spectral theorem) — clean principal axes.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>. Do the 2×2 ones by hand first.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Find the eigenvalues of $\begin{bmatrix}3&0\\0&1\end{bmatrix}$ by inspection, and name the eigenvectors.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Diagonal matrix: eigenvalues are the diagonal entries $3$ and $1$; eigenvectors are the axes $[1,0]$ (λ3) and $[0,1]$ (λ1). Diagonal matrices scale each axis by its entry.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>For $\begin{bmatrix}2&1\\1&2\end{bmatrix}$, use trace and det to write the characteristic equation and solve it.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\operatorname{tr}=4$, $\det=3$ → $\lambda^2-4\lambda+3=0$ → $(\lambda-1)(\lambda-3)=0$ → $\lambda=1,3$.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Confirm sum-of-eigenvalues = trace and product = det for a random 3×3 matrix.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">A = np.random.rand(<span class="n">3</span>,<span class="n">3</span>)
+vals = np.linalg.eigvals(A)
+np.isclose(vals.sum().real, np.trace(A)), np.isclose(vals.prod().real, np.linalg.det(A))  <span class="c"># (True, True)</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Take the rotation $\begin{bmatrix}0&-1\\1&0\end{bmatrix}$. What does <code>np.linalg.eig</code> return, and why?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Complex eigenvalues $\pm i$ (no real ones), because a 90° rotation preserves no real direction. The complex pair encodes the rotation angle.</p>
+    <pre class="code">np.linalg.eigvals([[<span class="n">0</span>,<span class="n">-1</span>],[<span class="n">1</span>,<span class="n">0</span>]])   <span class="c"># [0.+1.j 0.-1.j]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Power iteration: start with a random vector, repeatedly multiply by $A=\begin{bmatrix}2&1\\1&2\end{bmatrix}$ and normalize. What direction does it converge to, and why?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">A = np.array([[<span class="n">2.</span>,<span class="n">1</span>],[<span class="n">1</span>,<span class="n">2</span>]]); x = np.random.rand(<span class="n">2</span>)
+<span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">50</span>): x = A &#64; x; x = x/np.linalg.norm(x)
+x   <span class="c"># -> ~[0.707, 0.707], the eigenvector for the largest eigenvalue (3)</span></pre>
+    <p>It converges to the <strong>dominant eigenvector</strong> (largest $|\lambda|$), because that component grows fastest under repeated multiplication. This is exactly how PageRank is computed.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What are eigenvectors and eigenvalues, geometrically?</div><div class="a">Eigenvectors are directions a matrix only scales (not rotates): $A\mathbf{v}=\lambda\mathbf{v}$. The eigenvalue λ is the scale factor along that direction.</div></div>
+<div class="qa"><div class="q">Q2 · How do you find them for a 2×2?</div><div class="a">Solve the characteristic equation $\det(A-\lambda I)=0$, i.e. $\lambda^2-(\operatorname{tr}A)\lambda+\det A=0$, then plug each λ into $(A-\lambda I)\mathbf{v}=0$ for the eigenvectors.</div></div>
+<div class="qa"><div class="q">Q3 · Why are symmetric matrices special?</div><div class="a">The spectral theorem: symmetric matrices have real eigenvalues and orthogonal eigenvectors. Covariance matrices are symmetric, which is why PCA gives clean perpendicular components.</div></div>
+<div class="qa"><div class="q">Q4 · How do eigenvalues relate to determinant and trace?</div><div class="a">Product of eigenvalues = determinant; sum = trace. A zero eigenvalue ⇒ det 0 ⇒ singular.</div></div>
+<div class="qa"><div class="q">Q5 · How is PCA related to eigenvectors?</div><div class="a">PCA takes the eigenvectors of the covariance matrix as principal directions; eigenvalues give the variance along each. Keeping the largest few compresses the data.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Av = λv</td><td>Directions a transformation preserves</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Eigenvalue = stretch</td><td>Variance (PCA), growth/stability</td><td class="freq f-h">High</td></tr>
+  <tr><td>det(A−λI)=0</td><td>How eigenvalues are computed</td><td class="freq f-h">High</td></tr>
+  <tr><td>Symmetric ⇒ orthogonal eigvecs</td><td>Covariance → clean PCA axes</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>A = PDP⁻¹</td><td>Transformation = scaling in eigen-basis</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Dominant eigenvector</td><td>PageRank, power iteration</td><td class="freq f-m">Medium</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../07_svd_pca/theory.html" style="border:0;color:inherit">07 · SVD, PCA & low-rank →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Eigenvectors work cleanly for square, symmetric matrices — but data matrices are rectangular. The <em>singular value decomposition</em> generalizes the idea to any matrix, and powers PCA, recommenders, and LoRA.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 6 — eigenvector hunt: drag v, watch Av; align onto an eigen-line
+(function(){
+  const cv=document.getElementById('eplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, O={x:W*0.5,y:H*0.52}, S=48;
+  const PRESET={ sym:[[2,1],[1,2]], diag:[[3,0],[0,1]], shear:[[1,1],[0,1]], rot:[[0,-1],[1,0]] };
+  let key='sym', v={x:1,y:0.5}, drag=null;
+  const P=p=>({x:O.x+p.x*S, y:O.y-p.y*S});
+  const toData=q=>({x:(q.x-O.x)/S, y:(O.y-q.y)/S});
+  const applyM=(M,p)=>({x:M[0][0]*p.x+M[0][1]*p.y, y:M[1][0]*p.x+M[1][1]*p.y});
+
+  function eig2(M){
+    const a=M[0][0],b=M[0][1],c=M[1][0],d=M[1][1], tr=a+d, det=a*d-b*c, disc=tr*tr-4*det;
+    if(disc < -1e-9) return {real:false, tr, det};
+    const s=Math.sqrt(Math.max(0,disc)), ls=[(tr+s)/2,(tr-s)/2];
+    const vecs=ls.map(l=>{
+      let e;
+      if(Math.abs(b)>1e-9) e=[b, l-a];
+      else if(Math.abs(c)>1e-9) e=[l-d, c];
+      else e = Math.abs(l-a)<1e-9 ? [1,0] : [0,1];
+      const n=Math.hypot(e[0],e[1])||1; return [e[0]/n, e[1]/n];
+    });
+    return {real:true, vals:ls, vecs};
+  }
+  function arrow(f,t,col,w){
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(t.x,t.y);ctx.stroke();
+    const an=Math.atan2(t.y-f.y,t.x-f.x),h=13;
+    ctx.beginPath();ctx.moveTo(t.x,t.y);
+    ctx.lineTo(t.x-h*Math.cos(an-0.42),t.y-h*Math.sin(an-0.42));
+    ctx.lineTo(t.x-h*Math.cos(an+0.42),t.y-h*Math.sin(an+0.42));
+    ctx.closePath();ctx.fill();
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#EDEAE0';ctx.lineWidth=1;
+    for(let x=O.x%S;x<W;x+=S){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=O.y%S;y<H;y+=S){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,O.y);ctx.lineTo(W,O.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O.x,0);ctx.lineTo(O.x,H);ctx.stroke();
+
+    const M=PRESET[key], E=eig2(M);
+    // eigen-lines
+    if(E.real){
+      ctx.setLineDash([7,6]); ctx.strokeStyle='#B07514'; ctx.lineWidth=2; const L=30;
+      const seen=[];
+      E.vecs.forEach(e=>{
+        if(seen.some(s=>Math.abs(s[0]*e[1]-s[1]*e[0])<1e-6)) return; seen.push(e);
+        const a=P({x:-L*e[0],y:-L*e[1]}), b=P({x:L*e[0],y:L*e[1]});
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
+    const Av=applyM(M,v);
+    // angle between v and Av
+    const dot=v.x*Av.x+v.y*Av.y, mv=Math.hypot(v.x,v.y), mAv=Math.hypot(Av.x,Av.y);
+    let ang = (mv>1e-6&&mAv>1e-6) ? Math.acos(Math.max(-1,Math.min(1,dot/(mv*mAv))))*180/Math.PI : 0;
+    const aligned = mAv>1e-6 && (ang<6 || ang>174);
+    arrow(P({x:0,y:0}), P(Av), aligned?'#0E8C80':'#B07514', 3);
+    arrow(P({x:0,y:0}), P(v), '#5A4FCF', 3.5);
+    ctx.fillStyle='#fff';ctx.strokeStyle='#5A4FCF';ctx.lineWidth=3;
+    const pv=P(v); ctx.beginPath();ctx.arc(pv.x,pv.y,8,0,7);ctx.fill();ctx.stroke();
+    upd(E, ang, aligned, dot, mv);
+  }
+  function upd(E, ang, aligned, dot, mv){
+    const r=x=>Math.round(x*100)/100, el=id=>document.getElementById(id), M=PRESET[key];
+    el('rMat').textContent=`[[${M[0][0]}, ${M[0][1]}], [${M[1][0]}, ${M[1][1]}]]`;
+    el('rEig').textContent = E.real ? E.vals.map(x=>r(x)).join(', ') : 'complex (no real eigenvectors)';
+    el('rAngle').textContent = r(ang)+'°';
+    const st=el('rStatus');
+    if(aligned){ const lam=r(dot/(mv*mv)); st.textContent=`✓ eigenvector!  λ ≈ ${lam}`; st.style.color='#0E8C80'; }
+    else { st.textContent='drag v onto a dashed line'; st.style.color='var(--muted)'; }
+    document.querySelectorAll('.ctrl').forEach(b=>b.classList.toggle('active', b.dataset.key===key));
+  }
+  function pos(e){const R=cv.getBoundingClientRect(),sx=cv.width/R.width,sy=cv.height/R.height,s=e.touches?e.touches[0]:e;return{x:(s.clientX-R.left)*sx,y:(s.clientY-R.top)*sy};}
+  function down(e){const p=pos(e),pv=P(v);if(Math.hypot(p.x-pv.x,p.y-pv.y)<20){drag=true;e.preventDefault();}}
+  function move(e){if(!drag)return;e.preventDefault();const d=toData(pos(e)),sn=x=>Math.round(x*4)/4;v={x:sn(d.x),y:sn(d.y)};draw();}
+  function up(){drag=false;}
+  cv.addEventListener('mousedown',down);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
+  document.querySelectorAll('.ctrl').forEach(b=>b.addEventListener('click',()=>{ key=b.dataset.key; draw(); }));
+
+  draw();
+})();
+</script>
+</body>
+</html>
