@@ -58,7 +58,15 @@ SESSIONS = [
               ("s3","3 · Order matters"),("s4","4 · Shapes & associativity"),
               ("s5","5 · NumPy"),("s6","6 · Inside ML"),("ref","Rules & traps"),
               ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
-    # Sessions 05–18 get appended here as each _content.html is authored.
+    dict(num="05", slug="05_span_basis_rank", title="Span, basis, rank & independence",
+         lede="How much space can a set of vectors reach — and is any of them redundant? "
+              "The ideas behind collinear features, dimensionality, and invertibility.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Matrices"],
+         toc=[("s1","1 · Combinations & span"),("s2","2 · Linear independence"),
+              ("s3","3 · Basis & dimension"),("s4","4 · Rank"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 06–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range

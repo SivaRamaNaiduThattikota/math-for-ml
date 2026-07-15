@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Span, basis, rank & independence · Math for ML</title>
+<meta name="description" content="How much space can a set of vectors reach — and is any of them redundant? The ideas behind collinear features, dimensionality, and invertibility.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Span, basis, rank & independence · Math for ML">
+<meta property="og:description" content="How much space can a set of vectors reach — and is any of them redundant? The ideas behind collinear features, dimensionality, and invertibility.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="05_span_basis_rank">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · Combinations & span</a>
+  <a href="#s2">2 · Linear independence</a>
+  <a href="#s3">3 · Basis & dimension</a>
+  <a href="#s4">4 · Rank</a>
+  <a href="#s5">5 · NumPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Linear Algebra · 05</div>
+    <h1>Span, basis, rank & independence</h1>
+    <p class="lede">How much space can a set of vectors reach — and is any of them redundant? The ideas behind collinear features, dimensionality, and invertibility.</p>
+    <div class="meta"><span>~20 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: Matrices</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">Here's a question that quietly decides whether your model even works: given a handful of vectors, <em>how much space can they actually reach?</em> Two arrows might fill the whole plane — or, if one is just a stretched copy of the other, they might only ever trace a single line. That difference is the whole of this session, and it has a very concrete ML consequence: it's why <strong>redundant features break linear regression</strong>, why one-hot encoding has a famous trap, and what "effective dimensionality" really means.</p>
+
+<p>The four words — <strong>span, linear independence, basis, rank</strong> — are one idea seen from four angles: <em>how much space a set of vectors covers, and whether any of them are dead weight.</em></p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Describe the <strong>span</strong> of a set of vectors — everything you can reach by scaling and adding them.</li>
+    <li>Test whether vectors are <strong>linearly independent</strong> (all pulling their weight) or redundant.</li>
+    <li>Define a <strong>basis</strong> and read <strong>dimension</strong> as the number of vectors in it.</li>
+    <li>Read the <strong>rank</strong> of a matrix as its number of independent columns — and connect rank to det, invertibility, and Session 3–4.</li>
+    <li>Explain multicollinearity and the dummy-variable trap as rank deficiency.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§2.4 Vector Spaces, §2.5 Linear Independence, §2.6 Basis and Rank</span>. We build the geometric picture; those sections give the formal definitions and proofs.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Linear combinations & span</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Linear independence</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Basis & dimension</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Rank</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\text{span}\{\mathbf{v}_1,\dots\}$</span><span class="def">All linear combinations of the given vectors — the space they reach.</span>
+    <span class="sym">$c_1\mathbf{v}_1+c_2\mathbf{v}_2$</span><span class="def">A linear combination (scalars $c_i$).</span>
+    <span class="sym">$\dim V$</span><span class="def">Dimension of a space — the number of vectors in any basis.</span>
+    <span class="sym">$\text{rank}(A)$</span><span class="def">Number of linearly independent columns (= independent rows).</span>
+    <span class="sym">$\mathbf{0}$</span><span class="def">The zero vector; independence is defined by how you can (or can't) build it.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Linear combinations & span <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §2.4</a></h2>
+
+<p>A <strong>linear combination</strong> of vectors is what you get by scaling each and adding them up:</p>
+<div class="mathband">$$ c_1\mathbf{v}_1 + c_2\mathbf{v}_2 + \dots + c_k\mathbf{v}_k \qquad (c_i \text{ any real numbers}) $$</div>
+
+<p>The <strong>span</strong> of a set of vectors is the collection of <em>every</em> point you can reach this way. And here's the surprise that the demo below makes vivid: two vectors in the plane usually reach <em>everywhere</em> — but not always.</p>
+
+<ul>
+  <li>Two vectors pointing in <strong>different directions</strong> → their span is the <strong>whole plane</strong> (any point is some $c_1\mathbf{v}_1 + c_2\mathbf{v}_2$).</li>
+  <li>Two vectors on the <strong>same line</strong> (one a multiple of the other) → their span is just <strong>that line</strong>. Adding the second vector bought you nothing.</li>
+</ul>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="splay" width="880" height="470"></canvas>
+    <div class="readout">
+      <span><span class="k">v</span> = <span class="va" id="rV">[2, 1]</span></span>
+      <span><span class="k">w</span> = <span class="vb" id="rW">[-1, 1]</span></span>
+      <span><span class="k">span</span> = <span class="vd" id="rSpan">the whole plane</span></span>
+      <span><span class="k">rank</span> = <span class="vs" id="rRank">2</span></span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Drag <b>v</b> and <b>w</b>; the dots are every integer combination $i\,\mathbf{v}+j\,\mathbf{w}$.</strong> While the two arrows point different ways, the dots blanket the plane — <b>rank 2</b>. Now drag <b>w</b> until it lines up with <b>v</b> (parallel): the dots <em>collapse onto a single line</em> — the span dropped to <b>rank 1</b>, because <b>w</b> became redundant. That collapse is linear dependence, live.</figcaption>
+</figure>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Imagine a table with columns <code>price_usd</code> and <code>price_thousands_usd</code>. The second is just the first ÷ 1000 — it carries <em>zero new information</em>. As vectors (columns), one is a scalar multiple of the other: they span only a line, not a plane. A model can't tell them apart, and that's exactly the redundancy this session names.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Linear independence — is anyone redundant? <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §2.5</a></h2>
+
+<p>Vectors are <strong>linearly independent</strong> when none of them is a linear combination of the others — every vector adds a genuinely new direction. They're <strong>linearly dependent</strong> when at least one is redundant (reachable from the rest).</p>
+
+<p>$[2,4]$ and $[1,2]$ are dependent: the first is exactly $2\times$ the second. $[1,0]$ and $[0,1]$ are independent: neither can be built from the other. Independence is precisely what keeps the span from collapsing.</p>
+
+<details class="deeper"><summary>Going deeper — the formal definition</summary><div class="deep-body">
+  <p>Vectors $\mathbf{v}_1,\dots,\mathbf{v}_k$ are <strong>linearly independent</strong> if the <em>only</em> way to combine them into the zero vector is with all-zero coefficients:</p>
+  <div class="mathband">$$ c_1\mathbf{v}_1 + \dots + c_k\mathbf{v}_k = \mathbf{0} \quad\Longrightarrow\quad c_1 = \dots = c_k = 0 $$</div>
+  <p>If some <em>non-zero</em> coefficients also produce $\mathbf{0}$, the set is dependent — and you can rearrange that equation to write one vector in terms of the others, proving it's redundant. This "only the trivial combination gives zero" test is the definition you'll use in proofs. <span class="secs">See <b>MML §2.5</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Basis & dimension <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §2.6</a></h2>
+
+<p>A <strong>basis</strong> is a set of vectors that is both <em>independent</em> (no redundancy) and <em>spanning</em> (reaches everything) — the "just right" set: as few vectors as possible that still cover the whole space. The standard basis of the plane is $\hat{\imath}=[1,0]$, $\hat{\jmath}=[0,1]$, but <em>any</em> two independent vectors form a basis.</p>
+
+<p>The <strong>dimension</strong> of a space is the number of vectors in any basis for it — and remarkably, that number is the same no matter which basis you pick. The plane is 2-dimensional; $\mathbb{R}^n$ is $n$-dimensional. Every vector then has unique <strong>coordinates</strong> — the coefficients that build it from the basis (this is the idea PCA exploits in Session 7: choose a <em>smarter</em> basis).</p>
+
+<aside class="side"><span class="lbl">Thread</span>Session 1 said a vector's components are coordinates "relative to the axes." Now it's precise: they're coordinates <em>in a basis</em>. Change the basis and the same point gets new coordinates — the heart of <b>PCA</b>. <a class="xref" href="../07_svd_pca/theory.html">↳ Session 7</a></aside>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Rank — how many directions a matrix really has</h2>
+
+<p>Stack vectors as the <em>columns</em> of a matrix. The <strong>rank</strong> is the number of <strong>linearly independent columns</strong> — equivalently, the dimension of their span (the "column space"). It answers "how many genuinely different directions does this matrix contain?"</p>
+
+<div class="mathband">$$ \text{rank}\begin{bmatrix}1&2\\2&4\end{bmatrix}=1 \quad(\text{cols parallel}), \qquad \text{rank}\begin{bmatrix}1&0\\0&1\end{bmatrix}=2 \quad(\text{cols independent}) $$</div>
+
+<p>A square $n\times n$ matrix is <strong>full rank</strong> when rank $=n$, and <strong>rank-deficient</strong> otherwise. This ties together everything from Sessions 3–4 into one chain of equivalences:</p>
+
+<div class="callout c-good"><span class="tag">The equivalence chain (memorize this)</span>
+For a square matrix $A$, all of these say the <em>same thing</em>:<br>
+columns independent ⟺ full rank ⟺ $\det(A)\ne 0$ ⟺ span is all of $\mathbb{R}^n$ ⟺ $A$ is <strong>invertible</strong> ⟺ the transformation doesn't collapse space.<br>
+And the opposite: dependent columns ⟺ rank-deficient ⟺ $\det=0$ ⟺ collapses a dimension ⟺ <strong>not invertible</strong> (Session 3's det=0).</div>
+
+<details class="deeper"><summary>Going deeper — row rank = column rank</summary><div class="deep-body">
+  <p>A genuinely surprising theorem: the number of independent <em>columns</em> always equals the number of independent <em>rows</em>. That's why "rank" is unambiguous — you can count either way. It's why an $m\times n$ matrix has rank at most $\min(m,n)$: you can't have more independent columns than there are rows to hold them. This fact underlies low-rank approximation and SVD (Session 7). <span class="secs">See <b>MML §2.6</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="c"># columns as vectors — are they independent?</span>
+indep = np.array([[<span class="n">1</span>, <span class="n">0</span>], [<span class="n">0</span>, <span class="n">1</span>]], dtype=<span class="k">float</span>)
+dep   = np.array([[<span class="n">1</span>, <span class="n">2</span>], [<span class="n">2</span>, <span class="n">4</span>]], dtype=<span class="k">float</span>)   <span class="c"># col2 = 2*col1</span>
+
+<span class="f">print</span>(np.linalg.matrix_rank(indep))   <span class="c"># 2  full rank</span>
+<span class="f">print</span>(np.linalg.matrix_rank(dep))     <span class="c"># 1  rank-deficient!</span>
+<span class="f">print</span>(np.linalg.det(dep))             <span class="c"># 0.0  confirms singular</span>
+
+<span class="c"># a redundant feature makes a feature matrix rank-deficient</span>
+price = np.array([<span class="n">100</span>, <span class="n">200</span>, <span class="n">300.</span>])
+X = np.column_stack([price, price/<span class="n">1000</span>])   <span class="c"># 2nd col carries no new info</span>
+<span class="f">print</span>(np.linalg.matrix_rank(X))       <span class="c"># 1, not 2</span></pre>
+<div class="out">2
+1
+0.0
+1</div>
+
+<div class="callout c-warn"><span class="tag">rank uses a tolerance</span>
+<code>np.linalg.matrix_rank</code> treats tiny singular values as zero (numerical tolerance). Real-world features are rarely <em>exactly</em> dependent — they're <em>nearly</em> dependent (highly correlated), which is "practical" rank deficiency and causes the same instability. Watch the condition number, not just exact rank.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Multicollinearity.</strong> If two features are (near-)linearly dependent, the feature matrix is rank-deficient, $X^\top X$ isn't invertible, and linear-regression coefficients become unstable or undefined. Diagnosing this is a standard modelling step.</li>
+  <li><strong>The dummy-variable trap.</strong> One-hot encode a category into $k$ columns <em>and</em> keep an intercept, and those columns sum to the all-ones vector — a linear dependence. The fix (drop one column) is literally restoring independence.</li>
+  <li><strong>Effective dimensionality.</strong> A dataset with 100 features but rank 12 really "lives" in 12 dimensions; the other 88 are combinations. That gap is what <strong>PCA</strong> (Session 7) exploits to compress.</li>
+  <li><strong>Low-rank structure.</strong> Recommender systems and LoRA assume the important information is low-rank — a few independent directions explain most of the data.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Span asks "how much can we reach?"; independence asks "is anyone redundant?"; a basis is the perfect non-redundant spanning set; rank counts the real directions. Redundant features = rank deficiency = trouble — and the cure is finding the true, smaller basis (Session 7).</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>The zero vector</strong> is dependent with anything (0·nothing already gives it) — a set containing $\mathbf{0}$ is never independent.</li>
+  <li><strong>More vectors than dimensions</strong> are always dependent: 3 vectors in $\mathbb{R}^2$ can't all be independent (max independent set = dimension).</li>
+  <li><strong>Near-dependence ≠ exact dependence:</strong> correlated features are numerically almost dependent — same practical harm, but exact rank may still read "full."</li>
+  <li><strong>Rank ≤ min(rows, cols):</strong> a tall skinny $1000\times5$ matrix has rank at most 5.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li><strong>Span</strong> = everything reachable by scaling and adding the vectors.</li>
+  <li><strong>Independent</strong> = no vector is a combination of the others (only the trivial combo makes $\mathbf{0}$).</li>
+  <li>A <strong>basis</strong> is independent <em>and</em> spanning; <strong>dimension</strong> = its size.</li>
+  <li><strong>Rank</strong> = number of independent columns (= rows) = dimension of the span.</li>
+  <li>Square matrix: <strong>full rank ⟺ det≠0 ⟺ invertible ⟺ independent columns</strong>.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Redundant features in regression</span>
+Duplicated or derived columns (e.g. price and price/1000, or perfectly correlated features) make $X$ rank-deficient and blow up coefficient estimates. Check rank / correlation before fitting.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · The dummy-variable trap</span>
+One-hot all $k$ categories + an intercept ⇒ linear dependence (columns sum to ones). Drop one category, or drop the intercept.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Trusting exact rank on real data</span>
+Floating-point and noise mean features are rarely <em>exactly</em> dependent. Use condition number / near-zero singular values, not just <code>matrix_rank</code>, to catch near-collinearity.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">Vectors <code>[1,3]</code> and <code>[2,6]</code> — what do they span?</div>
+  <button class="opt">The whole plane (rank 2).</button>
+  <button class="opt">Nothing / only the origin.</button>
+  <button class="opt">A single line (rank 1) — the second is 2× the first, so it's redundant.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="0">
+  <div class="qz">Your 500×20 feature matrix has rank 18. What does that tell you?</div>
+  <button class="opt">Two features are (near-)linear combinations of the others — redundancy worth removing.</button>
+  <button class="opt">You have too few rows.</button>
+  <button class="opt">The matrix is invertible.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>, reasoning geometrically first.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Are $[1,2]$ and $[2,4]$ independent? Are $[1,2]$ and $[2,1]$? Decide by eye, then check the rank of each pair as columns.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>First pair: dependent (rank 1, one is 2× the other). Second: independent (rank 2).</p>
+    <pre class="code">np.linalg.matrix_rank([[<span class="n">1</span>,<span class="n">2</span>],[<span class="n">2</span>,<span class="n">4</span>]])   <span class="c"># 1</span>
+np.linalg.matrix_rank([[<span class="n">1</span>,<span class="n">2</span>],[<span class="n">2</span>,<span class="n">1</span>]])   <span class="c"># 2</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Can 3 vectors in $\mathbb{R}^2$ ever be linearly independent? Why or why not?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p><strong>No.</strong> The maximum number of independent vectors equals the dimension (2). Any third vector in the plane is already a combination of two independent ones — so at most 2 can be independent.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Build a 3×3 matrix whose third column is the sum of the first two. Predict its rank, then verify. What's its determinant?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Rank 2 (third column is dependent), so $\det = 0$.</p>
+    <pre class="code">A = np.array([[<span class="n">1</span>,<span class="n">0</span>,<span class="n">1</span>],[<span class="n">0</span>,<span class="n">1</span>,<span class="n">1</span>],[<span class="n">0</span>,<span class="n">0</span>,<span class="n">0.</span>]])  <span class="c"># c3 = c1 + c2</span>
+np.linalg.matrix_rank(A), np.linalg.det(A)   <span class="c"># (2, 0.0)</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Simulate the dummy-variable trap: one-hot encode 3 categories, add a column of ones (intercept), and show the matrix is rank-deficient.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">oh = np.array([[<span class="n">1</span>,<span class="n">0</span>,<span class="n">0</span>],[<span class="n">0</span>,<span class="n">1</span>,<span class="n">0</span>],[<span class="n">0</span>,<span class="n">0</span>,<span class="n">1</span>],[<span class="n">1</span>,<span class="n">0</span>,<span class="n">0.</span>]])
+X = np.column_stack([oh, np.ones(<span class="n">4</span>)])   <span class="c"># 4 cols</span>
+np.linalg.matrix_rank(X)                    <span class="c"># 3, not 4 (cols sum to ones)</span></pre>
+    <p>The three one-hot columns already sum to the intercept column — a dependence. Dropping one category restores full rank.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Given $[1,1,0]$ and $[0,1,1]$, find a third vector that (a) keeps the set independent, and (b) one that makes it dependent.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>(a) e.g. $[0,0,1]$ — points in a new direction, rank becomes 3. (b) e.g. $[1,2,1] = [1,1,0]+[0,1,1]$ — a combination of the first two, so rank stays 2.</p>
+    <pre class="code">np.linalg.matrix_rank(np.array([[<span class="n">1</span>,<span class="n">0</span>,<span class="n">0</span>],[<span class="n">1</span>,<span class="n">1</span>,<span class="n">0</span>],[<span class="n">0</span>,<span class="n">1</span>,<span class="n">1</span>]]).T)  <span class="c"># 3</span>
+np.linalg.matrix_rank(np.array([[<span class="n">1</span>,<span class="n">0</span>,<span class="n">1</span>],[<span class="n">1</span>,<span class="n">1</span>,<span class="n">2</span>],[<span class="n">0</span>,<span class="n">1</span>,<span class="n">1</span>]]).T)  <span class="c"># 2</span></pre>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What's the span of a set of vectors?</div><div class="a">Every point reachable as a linear combination of them. Two independent vectors in ℝ² span the whole plane; parallel ones span only a line.</div></div>
+<div class="qa"><div class="q">Q2 · Define linear independence.</div><div class="a">No vector is a combination of the others — equivalently, the only coefficients making them sum to the zero vector are all zero. Dependent means at least one is redundant.</div></div>
+<div class="qa"><div class="q">Q3 · What is rank, and how does it relate to invertibility?</div><div class="a">The number of independent columns (= rows) = dimension of the column space. A square matrix is invertible iff it's full rank iff det≠0 iff its columns are independent.</div></div>
+<div class="qa"><div class="q">Q4 · Why does multicollinearity hurt linear regression?</div><div class="a">Correlated/redundant features make X rank-deficient, so XᵀX is (near-)singular and can't be stably inverted — coefficients blow up or aren't unique.</div></div>
+<div class="qa"><div class="q">Q5 · What is the dummy-variable trap?</div><div class="a">One-hot encoding all k categories plus an intercept creates linear dependence (the dummies sum to the intercept). Drop one category or the intercept to restore full rank.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Span</td><td>How much space features can reach</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Linear independence</td><td>Redundant features; collinearity</td><td class="freq f-h">High</td></tr>
+  <tr><td>Basis & dimension</td><td>Coordinates; the setup for PCA</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Rank</td><td>Effective dimensionality; invertibility of XᵀX</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Rank ⟺ det ⟺ invertible</td><td>One chain linking Sessions 3–5</td><td class="freq f-h">High</td></tr>
+  <tr><td>Multicollinearity / dummy trap</td><td>Real regression bugs from rank deficiency</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../06_eigenvalues/theory.html" style="border:0;color:inherit">06 · Eigenvalues & eigenvectors →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Some directions a matrix only <em>stretches</em>, never rotates — its eigenvectors. Finding them reveals what a transformation "really does," and sets up SVD and PCA in Session 7.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 5 — span & rank playground (drag two vectors; watch the reachable set)
+(function(){
+  const cv=document.getElementById('splay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, O={x:W*0.5,y:H*0.52}, S=44;
+  let v={x:2,y:1}, w={x:-1,y:1}, drag=null;
+  const P=p=>({x:O.x+p.x*S, y:O.y-p.y*S});
+  const toData=q=>({x:(q.x-O.x)/S, y:(O.y-q.y)/S});
+  const EPS=0.12;
+
+  function arrow(f,t,col){
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=3.5;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(t.x,t.y);ctx.stroke();
+    const an=Math.atan2(t.y-f.y,t.x-f.x),h=13;
+    ctx.beginPath();ctx.moveTo(t.x,t.y);
+    ctx.lineTo(t.x-h*Math.cos(an-0.42),t.y-h*Math.sin(an-0.42));
+    ctx.lineTo(t.x-h*Math.cos(an+0.42),t.y-h*Math.sin(an+0.42));
+    ctx.closePath();ctx.fill();
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#EDEAE0';ctx.lineWidth=1;
+    for(let x=O.x%S;x<W;x+=S){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=O.y%S;y<H;y+=S){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,O.y);ctx.lineTo(W,O.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O.x,0);ctx.lineTo(O.x,H);ctx.stroke();
+
+    const cross=v.x*w.y - v.y*w.x;
+    const rank=(Math.abs(cross)>EPS)?2:((Math.hypot(v.x,v.y)>1e-6||Math.hypot(w.x,w.y)>1e-6)?1:0);
+
+    // if rank 1, draw the span line through origin along the nonzero vector
+    if(rank===1){
+      const d=(Math.hypot(v.x,v.y)>1e-6)?v:w, L=40;
+      const a=P({x:-L*d.x,y:-L*d.y}), b=P({x:L*d.x,y:L*d.y});
+      ctx.strokeStyle='#B07514';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    }
+    // lattice of integer combinations i*v + j*w
+    ctx.fillStyle = rank===2 ? 'rgba(90,79,207,0.55)' : 'rgba(176,117,20,0.75)';
+    for(let i=-9;i<=9;i++) for(let j=-9;j<=9;j++){
+      const px=P({x:i*v.x+j*w.x, y:i*v.y+j*w.y});
+      if(px.x<-5||px.x>W+5||px.y<-5||px.y>H+5) continue;
+      ctx.beginPath();ctx.arc(px.x,px.y,2.4,0,7);ctx.fill();
+    }
+    // vectors + handles
+    const o=P({x:0,y:0});
+    arrow(o,P(w),'#0E8C80'); arrow(o,P(v),'#5A4FCF');
+    [[P(v),'#5A4FCF'],[P(w),'#0E8C80']].forEach(([p,c])=>{
+      ctx.fillStyle='#fff';ctx.strokeStyle=c;ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(p.x,p.y,8,0,7);ctx.fill();ctx.stroke();
+    });
+    upd(rank);
+  }
+  function upd(rank){
+    const r=x=>Math.round(x*100)/100, el=id=>document.getElementById(id);
+    el('rV').textContent=`[${r(v.x)}, ${r(v.y)}]`;
+    el('rW').textContent=`[${r(w.x)}, ${r(w.y)}]`;
+    const span = rank===2 ? 'the whole plane' : rank===1 ? 'a line through the origin' : 'just the origin';
+    el('rSpan').textContent=span; el('rRank').textContent=rank;
+    el('rRank').style.color = rank===2 ? '#0E8C80' : '#C13A57';
+  }
+  function pos(e){const R=cv.getBoundingClientRect(),sx=cv.width/R.width,sy=cv.height/R.height,s=e.touches?e.touches[0]:e;return{x:(s.clientX-R.left)*sx,y:(s.clientY-R.top)*sy};}
+  function pick(p){const pv=P(v),pw=P(w);if(Math.hypot(p.x-pv.x,p.y-pv.y)<18)return'v';if(Math.hypot(p.x-pw.x,p.y-pw.y)<18)return'w';return null;}
+  function down(e){drag=pick(pos(e));if(drag)e.preventDefault();}
+  function move(e){if(!drag)return;e.preventDefault();const d=toData(pos(e)),sn=x=>Math.round(x*2)/2;if(drag==='v')v={x:sn(d.x),y:sn(d.y)};else w={x:sn(d.x),y:sn(d.y)};draw();}
+  function up(){drag=null;}
+  cv.addEventListener('mousedown',down);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
+
+  draw();
+})();
+</script>
+</body>
+</html>
