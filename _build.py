@@ -162,7 +162,14 @@ SESSIONS = [
               ("s3","3 · Gaussian → MSE"),("s4","4 · Bernoulli → cross-entropy"),
               ("s5","5 · MAP → regularization"),("s6","6 · NumPy & ML"),("ref","Rules & traps"),
               ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
-    # Session 18 gets appended here.
+    dict(num="18", slug="18_information_theory", title="Information theory",
+         lede="Entropy, cross-entropy, and KL divergence — the bits-and-surprise view that "
+              "reveals what cross-entropy means and closes the course.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Distributions, MLE"],
+         toc=[("s1","1 · Information = surprise"),("s2","2 · Entropy"),
+              ("s3","3 · Cross-entropy"),("s4","4 · KL divergence"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
 ]
 
 GROUP = {  # eyebrow label per session range

@@ -225,6 +225,11 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 15 — Sampling & the CLT** (CLT demonstrator: non-Gaussian source + sample-size slider → bell emerges, extends MML §6.4 + exact-CLT-statement deep-dive).
 - ✅ **Session 16 — Inference & hypothesis testing** (A/B test simulator with CI whiskers + two-proportion z-test, classical stats + what-a-p-value-is-not deep-dive).
 - ✅ **Session 17 — MLE & cross-entropy** (coin likelihood-curve MLE explorer, MML §8.3/§9 + Gaussian→MSE, Bernoulli→cross-entropy, MAP→L2/L1-prior deep-dive).
+- ✅ **Session 18 — Information theory** (binary entropy curve with live cross-entropy & KL, entropy/CE/KL + KL-asymmetry & CE=H+KL deep-dive).
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
-- ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).
+
+🎓 **COURSE COMPLETE — all 18 sessions authored, built, and live on GitHub Pages.** Each has the full
+9-beat arc, an interactive figure, ≥1 "Going deeper" proof, MML reference bar/chips, and a NumPy
+practice notebook. Pillars: Linear Algebra (01–07) ✅ · Calculus (08–11) ✅ · Probability (12–17) ✅ ·
+Information Theory (18) ✅.

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Information theory · Math for ML</title>
+<meta name="description" content="Entropy, cross-entropy, and KL divergence — the bits-and-surprise view that reveals what cross-entropy means and closes the course.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Information theory · Math for ML">
+<meta property="og:description" content="Entropy, cross-entropy, and KL divergence — the bits-and-surprise view that reveals what cross-entropy means and closes the course.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="18_information_theory">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · Information = surprise</a>
+  <a href="#s2">2 · Entropy</a>
+  <a href="#s3">3 · Cross-entropy</a>
+  <a href="#s4">4 · KL divergence</a>
+  <a href="#s5">5 · NumPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Information Theory · 18</div>
+    <h1>Information theory</h1>
+    <p class="lede">Entropy, cross-entropy, and KL divergence — the bits-and-surprise view that reveals what cross-entropy means and closes the course.</p>
+    <div class="meta"><span>~20 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: Distributions, MLE</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">Session 17 derived cross-entropy from likelihood. <strong>Information theory</strong> reveals what it <em>means</em>: cross-entropy measures, in bits, how surprised your model is by reality. From one idea — that a rare event carries more information than a common one — flow <strong>entropy</strong> (a distribution's inherent uncertainty), <strong>cross-entropy</strong> (the cost of believing the wrong distribution), and <strong>KL divergence</strong> (how far apart two distributions are). Together they underpin the classification loss, VAEs, knowledge distillation, and the KL penalty that keeps RLHF-tuned LLMs on the rails.</p>
+
+<p>This is the final session — the "bits and surprise" lens that unifies the probability pillar and closes the course.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Quantify <strong>information</strong> as surprise, $-\log p(x)$.</li>
+    <li>Compute <strong>entropy</strong> $H(p)$ — a distribution's average surprise / uncertainty.</li>
+    <li>Interpret <strong>cross-entropy</strong> $H(p,q)$ as the cost of using model $q$ when truth is $p$.</li>
+    <li>Use <strong>KL divergence</strong> $D(p\|q)$ and the identity cross-entropy = entropy + KL.</li>
+    <li>Recognize where these appear: the CE loss, VAEs, distillation, and RLHF.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> Extends <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) beyond its core with <span class="secs">information theory</span> — entropy, cross-entropy, and KL divergence — the quantities MML's ML chapters use for losses and variational methods. The capstone of the probability pillar.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Information = surprise</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Entropy</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Cross-entropy</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">KL divergence</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$-\log p(x)$</span><span class="def">Information / surprise of an outcome.</span>
+    <span class="sym">$H(p)$</span><span class="def">Entropy — average surprise of distribution $p$.</span>
+    <span class="sym">$H(p,q)$</span><span class="def">Cross-entropy — surprise of using $q$ when truth is $p$.</span>
+    <span class="sym">$D_{\mathrm{KL}}(p\|q)$</span><span class="def">KL divergence — extra bits from using $q$ instead of $p$.</span>
+    <span class="sym">bit / nat</span><span class="def">Unit of information: $\log_2$ (bits) or $\ln$ (nats).</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Information is surprise</h2>
+
+<p>How much do you learn from an event? If it was certain, nothing; if it was a shock, a lot. Information theory makes this precise: the <strong>information content</strong> (or "surprise") of an outcome with probability $p(x)$ is</p>
+
+<div class="mathband">$$ I(x) = -\log p(x) $$</div>
+
+<p>A near-certain event ($p\to1$) carries $\approx 0$ information; a rare one ($p\to0$) carries a lot. The log makes information <strong>additive</strong> for independent events (their probabilities multiply, so their surprises add) — and measured with $\log_2$, it's literally the number of <strong>bits</strong> needed to encode the outcome.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+"The server is up" — an expected, low-information row. "The server is on fire" — rare, high-information: it's the row that changes your day. Information theory quantifies that gut sense of "how newsworthy is this value," and it turns out to be exactly the loss your classifiers minimize.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Entropy — a distribution's uncertainty</h2>
+
+<p><strong>Entropy</strong> is the <em>average</em> surprise of a distribution — the expected information per draw:</p>
+<div class="mathband">$$ H(p) = -\sum_x p(x)\log p(x) = \mathbb{E}[-\log p(x)] $$</div>
+
+<p>It measures uncertainty. A <strong>uniform</strong> distribution (all outcomes equally likely) has <em>maximum</em> entropy — you can't predict anything. A <strong>peaked</strong> distribution (one outcome almost certain) has entropy near <strong>0</strong> — barely any surprise. Slide the true probability below and watch the binary entropy peak at $p=0.5$ (1 bit — a fair coin, maximally uncertain) and fall to 0 at the extremes.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="infoplay" width="880" height="380"></canvas>
+    <div class="ctrlrow"><span class="lbl2">true p:</span>
+      <input type="range" id="sP" min="0.01" max="0.99" step="0.01" value="0.5" style="flex:1;accent-color:var(--accent);max-width:250px;"><span id="rPv" class="vd">0.50</span></div>
+    <div class="ctrlrow"><span class="lbl2">model q:</span>
+      <input type="range" id="sQ" min="0.01" max="0.99" step="0.01" value="0.5" style="flex:1;accent-color:var(--accent);max-width:250px;"><span id="rQv" class="vd">0.50</span></div>
+    <div class="readout">
+      <span><span class="k">entropy H(p)</span> = <span class="va" id="rH">…</span></span>
+      <span><span class="k">cross-entropy H(p,q)</span> = <span class="vs" id="rCE">…</span></span>
+      <span><span class="k">KL(p‖q)</span> = <span class="vd" id="rKL">…</span></span>
+      <span id="rNote" class="vb">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Binary entropy, cross-entropy &amp; KL (in bits).</strong> The curve is $H(p)=-p\log_2 p-(1-p)\log_2(1-p)$; the indigo marker is your true $p$. It peaks at <b>1 bit</b> when $p=0.5$ (max uncertainty) and hits 0 at $p=0$ or $1$ (certainty). Move the <b>model q</b> slider away from $p$ and watch <b>cross-entropy rise above entropy</b> and <b>KL grow from 0</b> — the penalty for a wrong model. Set $q=p$ and KL returns to exactly 0.</figcaption>
+</figure>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Cross-entropy — the cost of a wrong model</h2>
+
+<p>Now suppose reality follows $p$ but your <em>model</em> believes $q$. Your average surprise, scored against the true frequencies, is the <strong>cross-entropy</strong>:</p>
+<div class="mathband">$$ H(p,q) = -\sum_x p(x)\log q(x) $$</div>
+
+<p>It is always <strong>at least the entropy</strong>, $H(p,q)\ge H(p)$, with equality only when $q=p$ — you can never be <em>less</em> surprised than reality's inherent uncertainty, and a wrong model makes you more surprised. This is exactly the classification loss from Session 17: the true distribution $p$ is the one-hot label, $q$ is the model's predicted probabilities, and $H(p,q)=-\log q(\text{true class})$. Minimizing cross-entropy trains the model's beliefs $q$ toward the truth $p$.</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>KL divergence — how far apart two distributions are</h2>
+
+<p>The <strong>Kullback–Leibler divergence</strong> is the <em>extra</em> surprise from using $q$ instead of the true $p$ — the gap between cross-entropy and entropy:</p>
+<div class="mathband">$$ D_{\mathrm{KL}}(p\,\|\,q)=\sum_x p(x)\log\frac{p(x)}{q(x)} = \underbrace{H(p,q)}_{\text{cross-entropy}}-\underbrace{H(p)}_{\text{entropy}} $$</div>
+
+<p>It's a "distance" between distributions: $D_{\mathrm{KL}}\ge 0$ always, and $=0$ exactly when $q=p$. Rearranged, <strong>cross-entropy = entropy + KL</strong>. Since the true distribution's entropy $H(p)$ is fixed, <strong>minimizing cross-entropy is minimizing the KL divergence</strong> — pulling the model $q$ onto the data distribution $p$.</p>
+
+<details class="deeper"><summary>Going deeper — KL is not symmetric (and why that matters)</summary><div class="deep-body">
+  <p>Crucially $D_{\mathrm{KL}}(p\|q)\ne D_{\mathrm{KL}}(q\|p)$ — it's a divergence, not a true distance (no symmetry, no triangle inequality). The direction changes behaviour: <strong>forward KL</strong> $D(p\|q)$ is "mode-covering" (q spreads to cover all of p's mass, penalizing $q\to0$ where $p>0$), while <strong>reverse KL</strong> $D(q\|p)$ is "mode-seeking" (q locks onto one mode). This choice shapes VAEs (which minimize a reverse-KL-flavoured term), distillation, and variational inference. And when $p$ is one-hot, $H(p)=0$, so cross-entropy <em>equals</em> KL equals $-\log q(\text{true class})$ — the classification loss is literally a KL divergence to the label. <span class="secs">Beyond MML core; used throughout its ML chapters.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> <span class="f">entropy</span>(p):        <span class="k">return</span> -np.sum(p*np.log2(p + <span class="n">1e-12</span>))
+<span class="k">def</span> <span class="f">cross_entropy</span>(p, q): <span class="k">return</span> -np.sum(p*np.log2(q + <span class="n">1e-12</span>))
+<span class="k">def</span> <span class="f">kl</span>(p, q):          <span class="k">return</span> np.sum(p*np.log2((p+<span class="n">1e-12</span>)/(q+<span class="n">1e-12</span>)))
+
+p = np.array([<span class="n">0.7</span>, <span class="n">0.2</span>, <span class="n">0.1</span>])          <span class="c"># truth</span>
+q = np.array([<span class="n">0.5</span>, <span class="n">0.3</span>, <span class="n">0.2</span>])          <span class="c"># model</span>
+<span class="f">print</span>(<span class="f">round</span>(<span class="f">entropy</span>(p),<span class="n">3</span>))              <span class="c"># 1.157 bits</span>
+<span class="f">print</span>(<span class="f">round</span>(<span class="f">cross_entropy</span>(p,q),<span class="n">3</span>))      <span class="c"># 1.276 bits (> entropy)</span>
+<span class="f">print</span>(<span class="f">round</span>(<span class="f">kl</span>(p,q),<span class="n">3</span>))                   <span class="c"># 0.119  = CE - H</span>
+
+<span class="c"># cross-entropy = entropy + KL, and KL >= 0</span>
+<span class="f">print</span>(np.isclose(<span class="f">cross_entropy</span>(p,q), <span class="f">entropy</span>(p)+<span class="f">kl</span>(p,q)))   <span class="c"># True</span>
+
+<span class="c"># one-hot label -> cross-entropy is just -log q(true class)</span>
+<span class="f">print</span>(<span class="f">round</span>(-np.log2(<span class="n">0.5</span>), <span class="n">3</span>))         <span class="c"># 1.0 bit if true class had q=0.5</span></pre>
+<div class="out">1.157
+1.276
+0.119
+True
+1.0</div>
+
+<div class="callout c-warn"><span class="tag">Add an epsilon, mind the base</span>
+$\log 0=-\infty$, so clamp with a tiny $\varepsilon$ (or use <code>log_softmax</code>/logits). Units depend on the log base: $\log_2$ → <b>bits</b>, $\ln$ → <b>nats</b> (what deep-learning frameworks use). The <em>shape</em> of the loss is identical; only the scale differs.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Cross-entropy loss</strong> — the default for classification and language modelling (next-token prediction is cross-entropy over the vocabulary).</li>
+  <li><strong>VAEs</strong> — the training objective (ELBO) has a KL term pulling the latent posterior toward a prior.</li>
+  <li><strong>Knowledge distillation</strong> — train a small "student" to match a big "teacher" by minimizing KL between their output distributions.</li>
+  <li><strong>RLHF / PPO</strong> — a KL penalty keeps the fine-tuned LLM policy close to the reference model, preventing it from drifting into gibberish.</li>
+  <li><strong>Mutual information</strong> $I(X;Y)$ (a KL between the joint and the product of marginals) drives feature selection and representation learning; <strong>t-SNE</strong> minimizes a KL; <strong>label smoothing</strong> softens the one-hot $p$.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Information is surprise ($-\log p$); entropy is average surprise; cross-entropy is your surprise under a wrong model; KL is the excess. Cross-entropy = entropy + KL, so minimizing the classification loss pulls your model's distribution onto the truth. It's the through-line from probability to nearly every modern loss.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>$\log 0$</strong> — a model assigning probability 0 to something that occurs gives infinite loss; clamp or use logits.</li>
+  <li><strong>KL is asymmetric</strong> — $D(p\|q)\ne D(q\|p)$; pick the direction deliberately (mode-covering vs mode-seeking).</li>
+  <li><strong>KL requires $q>0$ wherever $p>0$</strong> — otherwise it's infinite; forward KL punishes a model that rules out possible outcomes.</li>
+  <li><strong>Bits vs nats</strong> — $\log_2$ vs $\ln$ only rescales by $\ln 2$; don't compare numbers across bases.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li><strong>Information</strong> $=-\log p$: rarer = more surprising = more bits.</li>
+  <li><strong>Entropy</strong> $H(p)=-\sum p\log p$: average surprise; max at uniform, 0 at certain.</li>
+  <li><strong>Cross-entropy</strong> $H(p,q)=-\sum p\log q \ge H(p)$: cost of model $q$ under truth $p$.</li>
+  <li><strong>KL</strong> $=H(p,q)-H(p)\ge0$, $=0$ iff $q=p$; <strong>asymmetric</strong>.</li>
+  <li>Minimizing cross-entropy (fixed $p$) = minimizing <strong>KL(p‖q)</strong> = fitting the model to the data distribution.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Treating KL as a symmetric distance</span>
+$D(p\|q)\ne D(q\|p)$ and there's no triangle inequality. It's a divergence — the direction matters and encodes different fitting behaviour.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Zeros in the model</span>
+If $q(x)=0$ where $p(x)>0$, cross-entropy and KL blow up to infinity. Never let a model assign exactly 0 to a possible class — softmax + smoothing/logits avoid it.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Confusing bits and nats</span>
+Frameworks report cross-entropy in nats ($\ln$); textbooks often use bits ($\log_2$). Same optimum, different number — don't compare across the two.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">Which distribution over 4 outcomes has the highest entropy?</div>
+  <button class="opt">[0.97, 0.01, 0.01, 0.01]</button>
+  <button class="opt">[0.25, 0.25, 0.25, 0.25] — uniform is maximum uncertainty.</button>
+  <button class="opt">[1, 0, 0, 0]</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">Minimizing cross-entropy (with fixed true labels p) is equivalent to…</div>
+  <button class="opt">Maximizing the entropy of p.</button>
+  <button class="opt">Increasing KL(p‖q).</button>
+  <button class="opt">Minimizing KL(p‖q) — pulling the model q onto the truth p.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Compute the entropy (in bits) of a fair coin and of a fair 8-sided die.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Fair coin: $H=1$ bit. Fair d8: $H=\log_2 8=3$ bits (uniform over $K$ → $\log_2 K$).</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Show the binary entropy $H(p)$ is maximized at $p=0.5$ and 0 at $p\in\{0,1\}$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">H=<span class="k">lambda</span> p:-(p*np.log2(p)+(<span class="n">1</span>-p)*np.log2(<span class="n">1</span>-p))
+H(<span class="n">0.5</span>), H(<span class="n">0.9</span>)   <span class="c"># 1.0, 0.469 ; H->0 as p->0/1</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>For $p=[0.7,0.2,0.1]$, $q=[0.5,0.3,0.2]$, verify cross-entropy $=$ entropy $+$ KL.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">p=np.array([<span class="n">.7</span>,<span class="n">.2</span>,<span class="n">.1</span>]); q=np.array([<span class="n">.5</span>,<span class="n">.3</span>,<span class="n">.2</span>])
+H=-np.sum(p*np.log2(p)); CE=-np.sum(p*np.log2(q)); KL=np.sum(p*np.log2(p/q))
+np.isclose(CE, H+KL)   <span class="c"># True</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Show KL is asymmetric: compute $D(p\|q)$ and $D(q\|p)$ for the arrays in E3.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">kl=<span class="k">lambda</span> a,b:np.sum(a*np.log2(a/b))
+kl(p,q), kl(q,p)   <span class="c"># different values -> not symmetric</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>One-hot label $p=[0,1,0]$ and model $q=[0.1,0.7,0.2]$. Show cross-entropy $=$ KL $=-\log q(\text{true class})$ and entropy $=0$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">p=np.array([<span class="n">0</span>,<span class="n">1</span>,<span class="n">0.</span>]); q=np.array([<span class="n">.1</span>,<span class="n">.7</span>,<span class="n">.2</span>])
+CE=-np.sum(p*np.log2(q+<span class="n">1e-12</span>)); CE, -np.log2(<span class="n">0.7</span>)   <span class="c"># equal ~0.515</span></pre>
+    <p>Entropy of a one-hot is 0, so cross-entropy = KL = $-\log q(\text{true class})$ — the classification loss is a KL divergence to the label.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What is entropy, intuitively?</div><div class="a">The average surprise (information) of a distribution — its uncertainty. Maximal for a uniform distribution, zero for a deterministic one; measured in bits ($\log_2$) or nats ($\ln$).</div></div>
+<div class="qa"><div class="q">Q2 · What does cross-entropy measure, and why is it the classification loss?</div><div class="a">The average surprise of scoring data (true $p$) with a model ($q$): $-\sum p\log q$. With one-hot labels it's $-\log q(\text{true class})$, so minimizing it maximizes the probability the model assigns to the correct answers.</div></div>
+<div class="qa"><div class="q">Q3 · Define KL divergence and its key properties.</div><div class="a">$D(p\|q)=\sum p\log(p/q)=H(p,q)-H(p)$. It's $\ge0$, zero iff $p=q$, and asymmetric (not a metric). It's the extra bits from using $q$ instead of $p$.</div></div>
+<div class="qa"><div class="q">Q4 · Why is minimizing cross-entropy the same as minimizing KL?</div><div class="a">Cross-entropy = entropy(p) + KL(p‖q); with fixed true labels, entropy(p) is constant, so minimizing cross-entropy minimizes KL — fitting the model distribution to the data.</div></div>
+<div class="qa"><div class="q">Q5 · Where does KL show up beyond classification?</div><div class="a">VAE ELBO (latent vs prior), knowledge distillation (student vs teacher), RLHF PPO (policy vs reference), mutual information, and t-SNE.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Information = −log p</td><td>The unit of surprise / bits</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Entropy H(p)</td><td>Uncertainty; max at uniform</td><td class="freq f-h">High</td></tr>
+  <tr><td>Cross-entropy H(p,q)</td><td>The classification / LM loss</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>KL divergence</td><td>VAEs, distillation, RLHF, mutual info</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>CE = H + KL</td><td>Minimizing CE = fitting q to p</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">🎓 Course complete</span>
+  <h3><a href="../index.html" style="border:0;color:inherit">You've finished all 18 sessions →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Linear algebra moved the data, calculus optimized it, probability quantified the uncertainty, and information theory tied the losses together. From a data row as a point in space to why cross-entropy is a KL divergence — that's the math an ML engineer actually uses. Take it back to your projects: the vectors in OpsRAG's embeddings, the gradients training your fraud model, the cross-entropy behind every classifier. Well done.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 18 — binary entropy curve with live cross-entropy & KL
+(function(){
+  const cv=document.getElementById('infoplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, PAD=54, BASE=H-46;
+  let p=0.5, q=0.5;
+  const L2=x=>Math.log(x)/Math.log(2);
+  const Hf=t=>{t=Math.min(0.999,Math.max(0.001,t)); return -(t*L2(t)+(1-t)*L2(1-t));};
+  const CEf=(a,b)=>{b=Math.min(0.999,Math.max(0.001,b)); return -(a*L2(b)+(1-a)*L2(1-b));};
+  const px=t=>PAD+t*(W-2*PAD);
+  const py=v=>BASE-v*(BASE-30);      // v in [0,1] bits
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // axis + x ticks
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(PAD,BASE);ctx.lineTo(W-PAD,BASE);ctx.stroke();
+    ctx.fillStyle='#8A8698';ctx.font='11px "JetBrains Mono",monospace';ctx.textAlign='center';
+    for(let t=0;t<=10;t++)ctx.fillText((t/10).toFixed(1),px(t/10),BASE+18);
+    ctx.fillText('1 bit', PAD-24, py(1)+4);
+    // entropy curve
+    ctx.strokeStyle='#5A4FCF';ctx.lineWidth=3;ctx.beginPath();
+    for(let i=0;i<=200;i++){const t=0.001+i/200*0.998; i?ctx.lineTo(px(t),py(Hf(t))):ctx.moveTo(px(t),py(Hf(t)));}
+    ctx.stroke();
+    // q vertical line (model)
+    ctx.strokeStyle='#0E8C80';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+    ctx.beginPath();ctx.moveTo(px(q),30);ctx.lineTo(px(q),BASE);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#0E8C80';ctx.fillText('model q', px(q), 22);
+    // p marker on curve
+    ctx.fillStyle='#5A4FCF';ctx.beginPath();ctx.arc(px(p),py(Hf(p)),7,0,7);ctx.fill();
+    ctx.strokeStyle='#5A4FCF';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(px(p),py(Hf(p)));ctx.lineTo(px(p),BASE);ctx.stroke();
+    ctx.fillText('true p', px(p), py(Hf(p))-12);
+    upd();
+  }
+  function upd(){
+    const r=v=>Math.round(v*1000)/1000, el=id=>document.getElementById(id);
+    const h=Hf(p), ce=CEf(p,q), kl=ce-h;
+    el('rH').textContent=r(h); el('rCE').textContent=r(ce); el('rKL').textContent=r(Math.max(0,kl));
+    el('rPv').textContent=p.toFixed(2); el('rQv').textContent=q.toFixed(2);
+    const n=el('rNote');
+    if(Math.abs(p-q)<0.02){n.textContent='q = p → KL = 0 (perfect model) ✓';n.style.color='#0E8C80';}
+    else{n.textContent='wrong model → KL > 0 (extra bits)';n.style.color='#C13A57';}
+  }
+  const bind=(id,setter,span)=>{const s=document.getElementById(id);if(s)s.addEventListener('input',()=>{setter(parseFloat(s.value));draw();});};
+  bind('sP',v=>p=v); bind('sQ',v=>q=v);
+  draw();
+})();
+</script>
+</body>
+</html>
