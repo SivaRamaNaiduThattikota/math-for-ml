@@ -6,7 +6,7 @@ Built for a learner moving from a **Power BI + SQL** background into **ML / GenA
 
 ## Highlights
 
-- **18 sessions** across four pillars — Linear Algebra → Calculus → Probability → Information Theory.
+- **21 sessions + a capstone** across five pillars — Linear Algebra → Calculus → Probability → Information Theory → Applied Statistics.
 - **Interactive figures** — drag vectors, morph L1↔L2 norms, watch space transform under a matrix.
 - **Three themes** — Light, Dark, and an iOS-26 **Liquid Glass** theme (frosted panels, refraction, gyroscope specular, gel-press) — with a bubble page transition.
 - **Progress tracking**, keyboard shortcuts, print stylesheet, and full `prefers-reduced-motion` support.
@@ -20,8 +20,10 @@ Built for a learner moving from a **Power BI + SQL** background into **ML / GenA
 | Calculus | 08 Derivatives · 09 Partial derivatives · 10 Chain rule & backprop · 11 Gradient descent |
 | Probability | 12 Bayes · 13 Distributions · 14 Covariance · 15 Sampling & CLT · 16 Inference · 17 MLE & cross-entropy |
 | Information | 18 Entropy, cross-entropy & KL |
+| Applied Statistics | 19 Linear regression & bias–variance · 20 t/χ²/ANOVA · 21 Bayesian inference |
+| Capstone | ★ The whole spine — synthesis, worked example, cheat-sheet |
 
-*Currently published: Sessions 01–03.*
+*All 21 sessions + capstone published and live.*
 
 ## Structure
 

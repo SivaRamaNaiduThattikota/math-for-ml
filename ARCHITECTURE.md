@@ -40,7 +40,7 @@ Probability     12 Probability & Bayes → 13 Distributions (+ multivariate Gaus
 Info theory     18 Entropy, cross-entropy, KL divergence
 ```
 
-**18 sessions.** SVD is first-class (07) for its GenAI relevance (PCA, recommenders, **LoRA**);
+**18 core math sessions** (+ an Applied Statistics pillar 19–21 and a capstone). SVD is first-class (07) for its GenAI relevance (PCA, recommenders, **LoRA**);
 span/basis/rank (05) supplies the "shape of a vector space" layer. Lagrange/convexity (11),
 the Jacobian (09), and the multivariate Gaussian/covariance matrix (13–14) live as
 **"Going deeper"** blocks, not separate pillars. The probability + info-theory tail is kept
@@ -233,7 +233,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 
-🎓 **COURSE COMPLETE — all 18 sessions authored, built, and live on GitHub Pages.** Each has the full
+🎓 **COURSE COMPLETE — all 21 sessions + capstone authored, built, and live on GitHub Pages.** Each has the full
 9-beat arc, an interactive figure, ≥1 "Going deeper" proof, MML reference bar/chips, and a NumPy
 practice notebook. Pillars: Linear Algebra (01–07) ✅ · Calculus (08–11) ✅ · Probability (12–17) ✅ ·
 Information Theory (18) ✅.
