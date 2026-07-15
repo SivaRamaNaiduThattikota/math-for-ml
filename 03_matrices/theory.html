@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme');if(_t&&_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Matrices as transformations · Math for ML</title>
+<meta name="description" content="A matrix isn't a spreadsheet — it's a machine that moves space. Rotations, stretches, and projections are all one grid of numbers doing its job.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Matrices as transformations · Math for ML">
+<meta property="og:description" content="A matrix isn't a spreadsheet — it's a machine that moves space. Rotations, stretches, and projections are all one grid of numbers doing its job.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="03_matrices">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · Machine that moves space</a>
+  <a href="#s2">2 · Columns = basis images</a>
+  <a href="#s3">3 · Matrix × vector</a>
+  <a href="#s4">4 · Transformation zoo</a>
+  <a href="#s5">5 · What makes it linear</a>
+  <a href="#s6">6 · Determinant</a>
+  <a href="#s7">7 · NumPy & ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Linear Algebra · 03</div>
+    <h1>Matrices as transformations</h1>
+    <p class="lede">A matrix isn't a spreadsheet — it's a machine that moves space. Rotations, stretches, and projections are all one grid of numbers doing its job.</p>
+    <div class="meta"><span>~20 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: Vectors, Dot product</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">You've been treating a matrix as a spreadsheet — a grid of numbers. That view is correct but useless for intuition. The view that unlocks machine learning is this: <strong>a matrix is a function that moves space.</strong> Feed it a vector, it hands back a transformed vector — rotated, stretched, sheared, or flattened. A neural-network layer, a rotation in PCA, an image warp, a change of coordinates: all of them are a matrix doing the same one thing — <em>transforming every point at once, linearly</em>.</p>
+
+<p>Once you see matrices as transformations rather than tables, matrix multiplication (next session) stops being an arbitrary rule and becomes obvious: it's just <em>doing one transformation after another</em>.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Read a matrix as a <strong>linear transformation</strong> — a machine that maps every vector to a new one.</li>
+    <li>Use the one mental model that explains everything: <strong>the columns are where the basis vectors land</strong>.</li>
+    <li>Compute a matrix–vector product two ways — as a linear combination of columns, and as a stack of dot products.</li>
+    <li>Recognize the transformation zoo: scaling, rotation, shear, reflection, projection.</li>
+    <li>Read the <strong>determinant</strong> as the factor by which area (or volume) is scaled — and what a negative or zero determinant means.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§2.2 Matrices, §2.7 Linear Mappings</span> (and §4.1 Determinants for the area interpretation). We build the geometric intuition; those sections give the formal algebra.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">A machine that moves space</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Columns = where basis lands</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Matrix × vector</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">The transformation zoo</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">What makes it linear</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">The determinant</span></a>
+  <a href="#s7"><span class="n">07</span><span class="t">NumPy &amp; inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$A$</span><span class="def">A matrix (bold capital). Here, a transformation of space.</span>
+    <span class="sym">$A\mathbf{x}$</span><span class="def">The matrix applied to vector <b>x</b> — the transformed vector.</span>
+    <span class="sym">$A_{ij}$</span><span class="def">Entry in row <em>i</em>, column <em>j</em>.</span>
+    <span class="sym">$\hat{\imath},\ \hat{\jmath}$</span><span class="def">The basis vectors [1,0] and [0,1]. A matrix's columns are their images.</span>
+    <span class="sym">$I$</span><span class="def">The identity matrix — the "do nothing" transformation.</span>
+    <span class="sym">$\det(A)$</span><span class="def">The determinant — the area/volume scaling factor of the transformation.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>A matrix is a machine that moves space <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §2.7</a></h2>
+
+<p>A matrix $A$ takes a vector in and gives a vector out: $\mathbf{x} \mapsto A\mathbf{x}$. Apply it to <em>every</em> point in the plane and the whole space transforms — but in a very disciplined way. Watch what a matrix does to the humble vector $[1,1]$:</p>
+
+<div class="mathband">$$ A = \begin{bmatrix} 2 & 1 \\ 0 & 3 \end{bmatrix}, \qquad A\begin{bmatrix}1\\1\end{bmatrix} = \begin{bmatrix} 2\cdot1 + 1\cdot1 \\ 0\cdot1 + 3\cdot1 \end{bmatrix} = \begin{bmatrix}3\\3\end{bmatrix} $$</div>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+In Power BI you built a matrix as a <em>table</em> — rows and columns of numbers. That's a valid storage view. But the operation that makes matrices powerful isn't "look up a cell" — it's "apply this whole grid to a vector and get a transformed vector." Same object, a completely different verb: from <em>storing</em> numbers to <em>transforming</em> them.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The columns tell you everything</h2>
+
+<p>Here is the single idea that makes linear algebra click. <strong>The columns of a matrix are where the basis vectors land.</strong> Take the standard basis $\hat{\imath}=[1,0]$ and $\hat{\jmath}=[0,1]$. After applying $A$:</p>
+
+<div class="mathband">$$ A = \begin{bmatrix} \color{#5A4FCF}2 & \color{#0E8C80}1 \\ \color{#5A4FCF}0 & \color{#0E8C80}3 \end{bmatrix} \;\Rightarrow\; \hat{\imath}\mapsto\begin{bmatrix}\color{#5A4FCF}2\\\color{#5A4FCF}0\end{bmatrix},\quad \hat{\jmath}\mapsto\begin{bmatrix}\color{#0E8C80}1\\\color{#0E8C80}3\end{bmatrix} $$</div>
+
+<p>The <span style="color:var(--accent)"><b>first column</b></span> is the new home of $\hat{\imath}$; the <span style="color:var(--teal)"><b>second column</b></span> is the new home of $\hat{\jmath}$. That's <em>all a matrix stores</em>: the destinations of the basis vectors. Everything else follows, because every vector is just a combination of $\hat{\imath}$ and $\hat{\jmath}$ — and a linear transformation keeps that combination intact.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="tplay" width="880" height="470"></canvas>
+    <div class="readout">
+      <span><span class="k">î →</span> <span class="va" id="rI">[2, 0]</span></span>
+      <span><span class="k">ĵ →</span> <span class="vb" id="rJ">[1, 3]</span></span>
+      <span><span class="k">A</span> = <span class="vd" id="rMat">[[2, 1], [0, 3]]</span></span>
+      <span><span class="k">det A</span> = <span class="vs" id="rDet">6</span></span>
+    </div>
+    <button class="btn-anim" id="resetBtn">↺ Reset to identity</button>
+  </div>
+  <figcaption><strong>Figure 1 — Drag the two column vectors and watch space transform.</strong> The indigo arrow is where <b>î</b> lands (column 1), the teal arrow where <b>ĵ</b> lands (column 2). The whole grid, the unit square (now a parallelogram), and the sample point follow. The shaded area is the parallelogram whose size is <b>|det A|</b> — flip the columns' order visually (make det negative) and the fill turns red, meaning space was mirrored.</figcaption>
+</figure>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Matrix × vector, two ways <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §2.2</a></h2>
+
+<p>Because a vector $[x,y]$ means "$x$ steps along $\hat{\imath}$, $y$ steps along $\hat{\jmath}$," and the matrix tells us where those land, the transformed vector is the same combination of the columns. This is the <strong>column view</strong> — the one worth burning into memory:</p>
+
+<div class="mathband">$$ A\mathbf{x} = x\,(\text{column 1}) + y\,(\text{column 2}) = x\begin{bmatrix}2\\0\end{bmatrix} + y\begin{bmatrix}1\\3\end{bmatrix} $$</div>
+
+<p>There's a second, equally valid <strong>row view</strong>: each entry of the output is a dot product of a <em>row</em> of $A$ with $\mathbf{x}$ — which ties this session straight back to Session 2:</p>
+
+<div class="mathband">$$ A\mathbf{x} = \begin{bmatrix} \text{row}_1 \cdot \mathbf{x} \\ \text{row}_2 \cdot \mathbf{x} \end{bmatrix} = \begin{bmatrix} [2,1]\cdot[x,y] \\ [0,3]\cdot[x,y] \end{bmatrix} $$</div>
+
+<aside class="side"><span class="lbl">Two lenses, one operation</span>The <b>column view</b> ("combination of column vectors") builds geometric intuition; the <b>row view</b> ("stack of dot products") is how you compute by hand and how code loops. Fluent people switch between them mid-sentence.</aside>
+
+<div class="callout c-why"><span class="tag">Why it matters</span>
+The row view is why Session 2 mattered: a matrix–vector product is <em>a batch of dot products</em>. A neural-network layer computing $W\mathbf{x}$ is running one dot product per output neuron. Hold that thought — Session 4 stacks it into full matrix multiplication.</div>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>The transformation zoo</h2>
+
+<p>A handful of matrices show up everywhere. Each is just a choice of "where do the basis vectors go?"</p>
+
+<figure class="diagram"><div class="dgrid">
+  <div class="frame"><div class="dcap">Scaling · stretch each axis</div>
+  <svg viewBox="0 0 200 150" role="img" aria-label="Scaling transformation">
+    <g stroke="#C9C4B6" stroke-width="1.2"><path d="M20,130 H185 M20,20 V130"/></g>
+    <rect x="20" y="90" width="40" height="40" fill="#5A4FCF22" stroke="#9C99A6" stroke-dasharray="4 3"/>
+    <rect x="20" y="50" width="90" height="80" fill="#5A4FCF33" stroke="#5A4FCF" stroke-width="2"/>
+    <text x="120" y="46" font-family="JetBrains Mono,monospace" font-size="11" fill="#5A4FCF">[[2,0],[0,2]]</text>
+  </svg></div>
+  <div class="frame"><div class="dcap">Rotation · turn about origin</div>
+  <svg viewBox="0 0 200 150" role="img" aria-label="Rotation transformation">
+    <g stroke="#C9C4B6" stroke-width="1.2"><path d="M20,130 H185 M20,20 V130"/></g>
+    <rect x="20" y="90" width="40" height="40" fill="#0E8C8022" stroke="#9C99A6" stroke-dasharray="4 3"/>
+    <g transform="rotate(-35 20 130)"><rect x="20" y="90" width="40" height="40" fill="#0E8C8033" stroke="#0E8C80" stroke-width="2"/></g>
+    <text x="95" y="40" font-family="JetBrains Mono,monospace" font-size="10" fill="#0E8C80">[[cosθ,−sinθ],[sinθ,cosθ]]</text>
+  </svg></div>
+  <div class="frame"><div class="dcap">Shear · slant one axis</div>
+  <svg viewBox="0 0 200 150" role="img" aria-label="Shear transformation">
+    <g stroke="#C9C4B6" stroke-width="1.2"><path d="M20,130 H185 M20,20 V130"/></g>
+    <rect x="20" y="90" width="40" height="40" fill="#B0751422" stroke="#9C99A6" stroke-dasharray="4 3"/>
+    <polygon points="20,130 60,130 90,90 50,90" fill="#B0751433" stroke="#B07514" stroke-width="2"/>
+    <text x="105" y="60" font-family="JetBrains Mono,monospace" font-size="11" fill="#B07514">[[1,1],[0,1]]</text>
+  </svg></div>
+  <div class="frame"><div class="dcap">Projection · flatten onto a line</div>
+  <svg viewBox="0 0 200 150" role="img" aria-label="Projection transformation">
+    <g stroke="#C9C4B6" stroke-width="1.2"><path d="M20,130 H185 M20,20 V130"/></g>
+    <rect x="20" y="90" width="40" height="40" fill="#C13A5722" stroke="#9C99A6" stroke-dasharray="4 3"/>
+    <line x1="20" y1="130" x2="110" y2="130" stroke="#C13A57" stroke-width="4"/>
+    <text x="70" y="115" font-family="JetBrains Mono,monospace" font-size="11" fill="#C13A57">[[1,0],[0,0]]</text>
+  </svg></div>
+</div>
+<figcaption><strong>Figure 2 — Four everyday transformations</strong> (dashed = original unit square). Note projection <em>collapses</em> 2-D onto a line — it loses a dimension, which (as Section 6 shows) is exactly when the determinant hits zero.</figcaption>
+</figure>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>What makes a transformation "linear"?</h2>
+
+<p>Not every way of moving space is a matrix. A transformation is <strong>linear</strong> — and therefore representable as a matrix — exactly when it keeps grid lines <em>straight, parallel, and evenly spaced</em>, and keeps the <em>origin fixed</em>. Curving, bending, or shifting the origin is <em>not</em> linear (that last one is why bias terms $+\mathbf{b}$ are handled separately in a neural net — they're the non-linear-in-this-sense part).</p>
+
+<details class="deeper"><summary>Going deeper — the formal definition of linearity</summary><div class="deep-body">
+  <p>A map $T:\mathbb{R}^n\to\mathbb{R}^m$ is <strong>linear</strong> if it respects addition and scalar multiplication — for all vectors $\mathbf{x},\mathbf{y}$ and scalars $\lambda$:</p>
+  <div class="mathband">$$ T(\mathbf{x}+\mathbf{y}) = T(\mathbf{x}) + T(\mathbf{y}) \qquad\text{and}\qquad T(\lambda\mathbf{x}) = \lambda\,T(\mathbf{x}) $$</div>
+  <p>These two conditions are exactly why "the columns are where the basis vectors land" works: any $\mathbf{x}=x\hat{\imath}+y\hat{\jmath}$ maps to $T(\mathbf{x}) = xT(\hat{\imath}) + yT(\hat{\jmath})$ — knowing where the basis goes determines the whole map. Every linear map between finite-dimensional spaces <em>is</em> a matrix once you fix a basis. <span class="secs">Formal treatment: <b>MML §2.7</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>The determinant — how much area changes <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §4.1</a></h2>
+
+<p>Apply a matrix and the unit square becomes a parallelogram (Figure 1). The <strong>determinant</strong> is the factor by which area is scaled:</p>
+
+<div class="mathband">$$ \det\!\begin{bmatrix}a&b\\c&d\end{bmatrix} = ad - bc $$</div>
+
+<ul>
+  <li><strong>$\det = 2$</strong> → areas double. <strong>$\det = 1$</strong> → area preserved (e.g. any rotation).</li>
+  <li><strong>$\det < 0$</strong> → space was <em>flipped</em> (mirrored); the magnitude is still the area factor.</li>
+  <li><strong>$\det = 0$</strong> → space was <em>collapsed</em> onto a line or point — a dimension was lost. The matrix is <strong>singular</strong> (non-invertible): you can't undo a transformation that threw information away.</li>
+</ul>
+
+<details class="deeper"><summary>Going deeper — why det = 0 means "not invertible"</summary><div class="deep-body">
+  <p>If a transformation squashes 2-D space onto a line, many different input points get mapped to the <em>same</em> output point — so there's no way to reverse it uniquely. Algebraically, that's when the columns are <strong>linearly dependent</strong> (one is a multiple of the other), the matrix has <strong>rank</strong> less than full, and $\det = 0$. Rank, independence, and invertibility are the whole subject of <b>Session 5</b> — the determinant is your first detector for them. <span class="secs">See <b>MML §4.1</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 7 ═════════ -->
+<h2 id="s7"><span class="num">Section 7</span>In NumPy — and where it lives in ML</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+A = np.array([[<span class="n">2</span>, <span class="n">1</span>], [<span class="n">0</span>, <span class="n">3</span>]], dtype=<span class="k">float</span>)
+x = np.array([<span class="n">1</span>, <span class="n">1</span>], dtype=<span class="k">float</span>)
+
+<span class="f">print</span>(A &#64; x)                <span class="c"># [3. 3.]  apply the transformation</span>
+<span class="f">print</span>(np.linalg.det(A))     <span class="c"># 6.0     area scales x6</span>
+<span class="f">print</span>(np.eye(<span class="n">2</span>) &#64; x)        <span class="c"># [1. 1.]  identity = do nothing</span>
+
+<span class="c"># the columns are the images of the basis vectors</span>
+<span class="f">print</span>(A &#64; np.array([<span class="n">1</span>,<span class="n">0</span>]))   <span class="c"># [2. 0.]  -> column 1</span>
+<span class="f">print</span>(A &#64; np.array([<span class="n">0</span>,<span class="n">1</span>]))   <span class="c"># [1. 3.]  -> column 2</span></pre>
+<div class="out">[3. 3.]
+6.0
+[1. 1.]
+[2. 0.]
+[1. 3.]</div>
+
+<ul>
+  <li><strong>Every neural-network layer</strong> is a linear transformation $W\mathbf{x}$ followed by a bias and a nonlinearity. The weight matrix <em>is</em> a learned transformation of the feature space.</li>
+  <li><strong>PCA</strong> (Session 7) applies a rotation matrix that aligns the axes with the data's directions of greatest variance.</li>
+  <li><strong>Embeddings &amp; projections</strong> — mapping a 768-D vector down to 2-D for a plot is a (linear) projection matrix.</li>
+  <li><strong>Image processing &amp; graphics</strong> — rotations, scaling, and shears of images are literally these matrices.</li>
+</ul>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Shape rule:</strong> for $A\mathbf{x}$, the number of <em>columns</em> of $A$ must equal the length of $\mathbf{x}$. An $m\times n$ matrix maps $\mathbb{R}^n\to\mathbb{R}^m$.</li>
+  <li><strong>Order matters (next session):</strong> transformations don't generally commute — rotating then shearing ≠ shearing then rotating.</li>
+  <li><strong>The origin is fixed:</strong> a pure matrix always sends $\mathbf{0}\to\mathbf{0}$. Moving the origin needs a separate <em>translation</em> (a bias vector) — that's an <em>affine</em>, not linear, map.</li>
+  <li><strong>Non-square matrices</strong> change the dimension (e.g. $2\times3$ maps 3-D → 2-D) — they can't have a determinant.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>A matrix <strong>is a linear transformation</strong> of space — read it as a verb, not a table.</li>
+  <li>The <strong>columns are where the basis vectors land</strong>. That's the whole matrix.</li>
+  <li>$A\mathbf{x}$ = a <strong>linear combination of the columns</strong> (also = a stack of row·x dot products).</li>
+  <li>$\det$ = <strong>area/volume scaling</strong>; sign = orientation; <strong>zero = collapsed &amp; non-invertible</strong>.</li>
+  <li>An $m\times n$ matrix maps $\mathbb{R}^n\to\mathbb{R}^m$ — match columns to input length.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Reading a matrix by rows for intuition</span>
+For <em>computing</em> $A\mathbf{x}$ by hand, rows-as-dot-products is fine. For <em>understanding</em> what a matrix does, think <strong>columns</strong> — where the basis lands. Mixing them up is the #1 source of "I can compute it but I don't get it."</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Forgetting the origin is pinned</span>
+A linear map can't translate. If your transformation needs to <em>move</em> the origin (shift data), that's a bias/affine step, handled separately — a classic bug when hand-rolling transforms.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Assuming order doesn't matter</span>
+Matrix (transformation) composition is <strong>not</strong> commutative. "Rotate then scale" and "scale then rotate" give different results — Session 4 makes this precise.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">A matrix has columns <code>[0,1]</code> and <code>[-1,0]</code>. What does it do to space?</div>
+  <button class="opt">Doubles every vector's length.</button>
+  <button class="opt">Rotates space 90° counter-clockwise (î→[0,1], ĵ→[-1,0]).</button>
+  <button class="opt">Collapses space onto a line.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">You compute <code>det(A) = 0</code>. What do you know?</div>
+  <button class="opt">A rotates space with no scaling.</button>
+  <button class="opt">A preserves area exactly.</button>
+  <button class="opt">A collapses space (loses a dimension) and is not invertible.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>, predicting each result geometrically first.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Apply $A=\begin{bmatrix}3&0\\0&1\end{bmatrix}$ to $[2,5]$ by hand. Describe what the matrix does in words.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$A[2,5] = [6,5]$. It <strong>stretches the x-axis by 3</strong> and leaves y unchanged (an axis-aligned scaling).</p>
+    <pre class="code">np.array([[<span class="n">3</span>,<span class="n">0</span>],[<span class="n">0</span>,<span class="n">1</span>]]) &#64; np.array([<span class="n">2</span>,<span class="n">5</span>])  <span class="c"># [6 5]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>What are the images of $\hat{\imath}$ and $\hat{\jmath}$ under $\begin{bmatrix}1&1\\0&1\end{bmatrix}$? What transformation is this?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\hat{\imath}\mapsto[1,0]$ (unchanged), $\hat{\jmath}\mapsto[1,1]$ (slanted right). It's a <strong>horizontal shear</strong>.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Build the 2×2 matrix that rotates 90° counter-clockwise, then verify it sends $[1,0]\to[0,1]$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Rotation by 90°: $\hat{\imath}\to[0,1]$, $\hat{\jmath}\to[-1,0]$, so $R=\begin{bmatrix}0&-1\\1&0\end{bmatrix}$.</p>
+    <pre class="code">R = np.array([[<span class="n">0</span>,<span class="n">-1</span>],[<span class="n">1</span>,<span class="n">0</span>]])
+R &#64; np.array([<span class="n">1</span>,<span class="n">0</span>])   <span class="c"># [0 1]  ✓</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Compute $\det$ of $\begin{bmatrix}2&1\\4&2\end{bmatrix}$. What does the result tell you geometrically?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\det = (2)(2)-(1)(4) = 0$. The columns $[2,4]$ and $[1,2]$ are <strong>parallel</strong> (one is 2× the other), so the matrix <strong>collapses the plane onto a line</strong> — singular, non-invertible.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>A projection onto the x-axis is $P=\begin{bmatrix}1&0\\0&0\end{bmatrix}$. Show that applying it twice equals applying it once ($P^2 = P$), and explain why that makes sense.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">P = np.array([[<span class="n">1</span>,<span class="n">0</span>],[<span class="n">0</span>,<span class="n">0</span>]])
+P &#64; P            <span class="c"># [[1 0],[0 0]] == P</span></pre>
+    <p>Once you've flattened a point onto the x-axis, flattening again does nothing — it's already there. Transformations with $P^2=P$ are called <strong>idempotent</strong> (all projections are). $\det P = 0$, confirming it loses a dimension.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What does a matrix represent, geometrically?</div><div class="a">A linear transformation of space — it maps every vector to a new vector, keeping grid lines straight/parallel/evenly spaced and the origin fixed. Its columns are the images of the basis vectors.</div></div>
+<div class="qa"><div class="q">Q2 · Give the two ways to read a matrix–vector product.</div><div class="a">Column view: a linear combination of the matrix's columns weighted by the vector's entries. Row view: a stack of dot products of each row with the vector. Same result; one for intuition, one for computation.</div></div>
+<div class="qa"><div class="q">Q3 · What does the determinant tell you?</div><div class="a">The factor by which area/volume is scaled. Negative = orientation flipped; zero = space collapsed to a lower dimension, so the matrix is singular (non-invertible).</div></div>
+<div class="qa"><div class="q">Q4 · Why is det = 0 the same as "not invertible"?</div><div class="a">A zero determinant means the columns are linearly dependent and a dimension was lost; multiple inputs map to the same output, so the map can't be uniquely reversed.</div></div>
+<div class="qa"><div class="q">Q5 · How does this connect to neural networks?</div><div class="a">A layer computes $W\mathbf{x}+\mathbf{b}$: the weight matrix is a learned linear transformation of the input space, the bias is a translation, and a nonlinearity follows. Training learns the transformation.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Matrix = linear transformation</td><td>Every layer, rotation, projection is one</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Columns = basis images</td><td>The mental model that unlocks all of linear algebra</td><td class="freq f-h">High</td></tr>
+  <tr><td>Ax = combo of columns</td><td>Column &amp; row (dot-product) views of a layer</td><td class="freq f-h">High</td></tr>
+  <tr><td>Transformation zoo</td><td>Scale/rotate/shear/project — building blocks</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Linearity</td><td>Why bias/translation is separate; what a matrix can't do</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Determinant</td><td>Area scaling; det=0 ⇒ singular / dimension lost</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../04_matrix_multiplication/theory.html" style="border:0;color:inherit">04 · Matrix multiplication →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">If a matrix is a transformation, what is multiplying two matrices? <em>Doing one after the other.</em> We'll see why the "row times column" rule is exactly composition of transformations — and why order matters.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 3 — linear transformation visualizer (drag where the basis vectors land)
+(function(){
+  const cv=document.getElementById('tplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, O={x:W*0.5,y:H*0.52}, S=42;
+  let i={x:2,y:0}, j={x:1,y:3}, drag=null;                 // images of the basis vectors
+  const P=v=>({x:O.x+v.x*S, y:O.y-v.y*S});                  // plane coords -> pixels
+  const toData=q=>({x:(q.x-O.x)/S, y:(O.y-q.y)/S});
+
+  function arrow(f,t,col,w){
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(t.x,t.y);ctx.stroke();
+    const an=Math.atan2(t.y-f.y,t.x-f.x),h=13;
+    ctx.beginPath();ctx.moveTo(t.x,t.y);
+    ctx.lineTo(t.x-h*Math.cos(an-0.42),t.y-h*Math.sin(an-0.42));
+    ctx.lineTo(t.x-h*Math.cos(an+0.42),t.y-h*Math.sin(an+0.42));
+    ctx.closePath();ctx.fill();
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // faint original grid
+    ctx.strokeStyle='#EDEAE0';ctx.lineWidth=1;
+    for(let x=O.x%S;x<W;x+=S){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=O.y%S;y<H;y+=S){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // transformed grid (lines along i spaced by j, and along j spaced by i)
+    const N=9;
+    ctx.strokeStyle='#C3BCF0';ctx.lineWidth=1;
+    for(let k=-N;k<=N;k++){
+      let a=P({x:k*i.x-N*j.x, y:k*i.y-N*j.y}), b=P({x:k*i.x+N*j.x, y:k*i.y+N*j.y});
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      let c=P({x:k*j.x-N*i.x, y:k*j.y-N*i.y}), d=P({x:k*j.x+N*i.x, y:k*j.y+N*i.y});
+      ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(d.x,d.y);ctx.stroke();
+    }
+    // original axes
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,O.y);ctx.lineTo(W,O.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O.x,0);ctx.lineTo(O.x,H);ctx.stroke();
+    // unit-square image (parallelogram) — fill signals det sign
+    const det=i.x*j.y - i.y*j.x;
+    const o=P({x:0,y:0}), pi=P(i), pj=P(j), pij=P({x:i.x+j.x,y:i.y+j.y});
+    ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(pi.x,pi.y);ctx.lineTo(pij.x,pij.y);ctx.lineTo(pj.x,pj.y);ctx.closePath();
+    ctx.fillStyle = det<0 ? 'rgba(193,58,87,0.20)' : 'rgba(14,140,128,0.20)';
+    ctx.fill();
+    // basis image arrows + handles
+    arrow(o,pj,'#0E8C80',3.5);
+    arrow(o,pi,'#5A4FCF',3.5);
+    [[pi,'#5A4FCF'],[pj,'#0E8C80']].forEach(([p,c])=>{
+      ctx.fillStyle='#fff';ctx.strokeStyle=c;ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(p.x,p.y,8,0,7);ctx.fill();ctx.stroke();
+    });
+    upd(det);
+  }
+  function upd(det){
+    const r=v=>Math.round(v*100)/100, el=id=>document.getElementById(id);
+    el('rI').textContent=`[${r(i.x)}, ${r(i.y)}]`;
+    el('rJ').textContent=`[${r(j.x)}, ${r(j.y)}]`;
+    el('rMat').textContent=`[[${r(i.x)}, ${r(j.x)}], [${r(i.y)}, ${r(j.y)}]]`;
+    el('rDet').textContent=r(det);
+    el('rDet').style.color = det<-0.001 ? '#C13A57' : det>0.001 ? '#0E8C80' : '#B07514';
+  }
+  function pos(e){const R=cv.getBoundingClientRect(),sx=cv.width/R.width,sy=cv.height/R.height,s=e.touches?e.touches[0]:e;return{x:(s.clientX-R.left)*sx,y:(s.clientY-R.top)*sy};}
+  function pick(p){const pi=P(i),pj=P(j);if(Math.hypot(p.x-pi.x,p.y-pi.y)<18)return'i';if(Math.hypot(p.x-pj.x,p.y-pj.y)<18)return'j';return null;}
+  function down(e){drag=pick(pos(e));if(drag)e.preventDefault();}
+  function move(e){if(!drag)return;e.preventDefault();const d=toData(pos(e)),sn=v=>Math.round(v*2)/2;if(drag==='i')i={x:sn(d.x),y:sn(d.y)};else j={x:sn(d.x),y:sn(d.y)};draw();}
+  function up(){drag=null;}
+  cv.addEventListener('mousedown',down);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
+
+  const rb=document.getElementById('resetBtn');
+  if(rb) rb.addEventListener('click',()=>{ i={x:1,y:0}; j={x:0,y:1}; draw(); });
+
+  draw();
+})();
+</script>
+</body>
+</html>
