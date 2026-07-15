@@ -1,0 +1,362 @@
+<p class="dropcap">In Session 1 you learned to see a data row as a point in space. But ML rarely cares about a single point — it cares about <em>relationships</em> between points: is this document like that query? does this feature move with the target? how much does one vector agree with another? Almost every one of those questions is answered by a single, humble operation — the <strong>dot product</strong> — that takes two vectors and returns one number measuring how much they <em>agree</em>.</p>
+
+<p>It is the most important operation in this entire course. Cosine similarity, matrix multiplication, neural-network layers, and the attention mechanism inside every transformer are all dot products wearing different clothes. Get this one deeply and the rest of ML stops looking like magic.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Compute a dot product two ways — algebraically ($\sum a_i b_i$) and geometrically ($\lVert a\rVert\lVert b\rVert\cos\theta$) — and know why they're equal.</li>
+    <li>Read its <em>sign</em> as agreement: positive = aligned, zero = perpendicular, negative = opposing.</li>
+    <li>Use it to <strong>project</strong> one vector onto another, and to compute <strong>cosine similarity</strong>.</li>
+    <li>Explain why cosine similarity — not raw dot product — powers embedding search (OpsRAG) and recommendations.</li>
+    <li>See the dot product hiding inside matrix multiplication and transformer attention.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§3.2 Inner Products, §3.3 Lengths &amp; Distances, §3.4 Angles &amp; Orthogonality, §3.8 Orthogonal Projections</span>. The dot product is the <em>standard inner product</em> on $\mathbb{R}^n$; MML develops the general theory those sections formalize.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">One number from two vectors</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">The geometric meaning</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Projection</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Cosine similarity</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">Length is a dot product</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">NumPy</span></a>
+  <a href="#s7"><span class="n">07</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\mathbf{a}\cdot\mathbf{b}$</span><span class="def">The dot product (a scalar). Also written $\mathbf{a}^\top\mathbf{b}$.</span>
+    <span class="sym">$\theta$</span><span class="def">The angle between vectors <b>a</b> and <b>b</b>.</span>
+    <span class="sym">$\cos\theta$</span><span class="def">Cosine similarity when <b>a</b>, <b>b</b> are involved: agreement in direction, from −1 to 1.</span>
+    <span class="sym">$\lVert\mathbf{v}\rVert$</span><span class="def">The L2 norm (length) from Session 1.</span>
+    <span class="sym">$\text{proj}_\mathbf{b}\,\mathbf{a}$</span><span class="def">The projection of <b>a</b> onto <b>b</b> — the shadow of a along b.</span>
+    <span class="sym">$\perp$</span><span class="def">Perpendicular / orthogonal — the dot product is 0.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>One number from two vectors</h2>
+
+<p>The <strong>dot product</strong> of two vectors of the same length multiplies them component-by-component and sums the results:</p>
+
+<div class="mathband">$$ \mathbf{a}\cdot\mathbf{b} \;=\; \sum_{i=1}^{n} a_i b_i \;=\; a_1 b_1 + a_2 b_2 + \dots + a_n b_n $$</div>
+
+<p>Two vectors go in; <strong>one scalar</strong> comes out. That "two vectors → one number" shape is the whole reason it's useful: it <em>compresses</em> a comparison into a single score. A worked instance:</p>
+
+<div class="mathband">$$ [4,2]\cdot[1,3] = (4)(1) + (2)(3) = 4 + 6 = 10 $$</div>
+
+<aside class="side"><span class="lbl">Precise name</span>What we call the "dot product" is, formally, the <b>standard (Euclidean) inner product</b> on $\mathbb{R}^n$, written $\langle\mathbf{a},\mathbf{b}\rangle$ or $\mathbf{a}^\top\mathbf{b}$. Inner products are a more general family (any symmetric, positive-definite bilinear form); the dot product is the everyday one. <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §3.2</a></aside>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+You have done this a hundred times without the name. <code>SUMPRODUCT(quantity, price)</code> in Excel, or <code>SUM(qty * price)</code> in SQL, <em>is</em> a dot product: pair up two columns, multiply, add. A weighted total is a dot product of a values vector with a weights vector. Every "weighted sum" you've ever written is this operation.</div>
+
+<p>That last point matters more than it looks. A linear model's prediction is <strong>exactly</strong> a dot product of a feature vector with a weight vector, plus a bias:</p>
+
+<div class="mathband">$$ \hat{y} = \mathbf{w}\cdot\mathbf{x} + b = w_1 x_1 + w_2 x_2 + \dots + w_n x_n + b $$</div>
+
+<p>So when your fraud or churn model scored a transaction, it computed a dot product. Learning the weights <em>is</em> learning which features to agree or disagree with.</p>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The geometric meaning — agreement <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §3.4</a></h2>
+
+<p>The algebraic formula is easy to compute but hides <em>why</em> it's meaningful. There is a second, equivalent definition that reveals everything:</p>
+
+<div class="mathband">$$ \mathbf{a}\cdot\mathbf{b} \;=\; \lVert\mathbf{a}\rVert\,\lVert\mathbf{b}\rVert\,\cos\theta $$</div>
+
+<aside class="side"><span class="lbl">Why equal?</span>The two formulas agree because of the law of cosines applied to the triangle formed by <b>a</b>, <b>b</b>, and <b>a−b</b>. You don't need the proof today — you need the consequence: the dot product secretly contains the <em>angle</em> between the vectors.</aside>
+
+<details class="deeper"><summary>Going deeper — why the two definitions are equal</summary><div class="deep-body">
+  <p>Consider the triangle with sides <b>a</b>, <b>b</b>, and the third side $\mathbf{a}-\mathbf{b}$. The <strong>law of cosines</strong> says:</p>
+  <div class="mathband">$$ \lVert\mathbf{a}-\mathbf{b}\rVert^2 = \lVert\mathbf{a}\rVert^2 + \lVert\mathbf{b}\rVert^2 - 2\lVert\mathbf{a}\rVert\lVert\mathbf{b}\rVert\cos\theta $$</div>
+  <p>Now expand the left side using $\lVert\mathbf{v}\rVert^2 = \mathbf{v}\cdot\mathbf{v}$ (Section 5) and the fact that the dot product distributes:</p>
+  <div class="mathband">$$ \lVert\mathbf{a}-\mathbf{b}\rVert^2 = (\mathbf{a}-\mathbf{b})\cdot(\mathbf{a}-\mathbf{b}) = \lVert\mathbf{a}\rVert^2 - 2\,\mathbf{a}\cdot\mathbf{b} + \lVert\mathbf{b}\rVert^2 $$</div>
+  <p>Set the two expressions equal, cancel $\lVert\mathbf{a}\rVert^2+\lVert\mathbf{b}\rVert^2$ from both sides, and you're left with $-2\,\mathbf{a}\cdot\mathbf{b} = -2\lVert\mathbf{a}\rVert\lVert\mathbf{b}\rVert\cos\theta$, i.e. $\mathbf{a}\cdot\mathbf{b} = \lVert\mathbf{a}\rVert\lVert\mathbf{b}\rVert\cos\theta$. The algebra <em>is</em> the geometry. <span class="secs">See <b>MML §3.4</b>.</span></p>
+</div></details>
+
+<p>Because $\lVert\mathbf{a}\rVert$ and $\lVert\mathbf{b}\rVert$ are always positive, the <strong>sign of the dot product is the sign of $\cos\theta$</strong> — which is pure geometry:</p>
+
+<ul>
+  <li><strong>$\mathbf{a}\cdot\mathbf{b} > 0$</strong> — the vectors point in broadly the <em>same</em> direction ($\theta < 90°$). They <strong>agree</strong>.</li>
+  <li><strong>$\mathbf{a}\cdot\mathbf{b} = 0$</strong> — the vectors are <strong>perpendicular</strong> ($\theta = 90°$). They are unrelated / <strong>orthogonal</strong>.</li>
+  <li><strong>$\mathbf{a}\cdot\mathbf{b} < 0$</strong> — they point in broadly <em>opposite</em> directions ($\theta > 90°$). They <strong>disagree</strong>.</li>
+</ul>
+
+<div class="why-box callout c-why"><span class="tag">Why it matters</span>
+"How much do two things agree?" is the question behind similarity search, recommendations, and attention. The dot product answers it with one number, and its sign tells you the <em>direction</em> of the relationship. That single idea — <strong>dot product = agreement</strong> — is what you carry out of this session.</div>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="dplay" width="880" height="470"></canvas>
+    <div class="readout">
+      <span><span class="k">a</span> = <span class="va" id="rA">[4, 2]</span></span>
+      <span><span class="k">b</span> = <span class="vb" id="rB">[1, 3]</span></span>
+      <span><span class="k">a·b</span> = <span class="vd" id="rDot">10</span></span>
+      <span><span class="k">θ</span> = <span class="vd" id="rAng">36.9</span>°</span>
+      <span><span class="k">cos θ</span> = <span class="vs" id="rCos">0.80</span></span>
+      <span><span class="k">proj length</span> = <span class="vd" id="rProj">3.16</span></span>
+    </div>
+    <button class="btn-anim" id="sweepBtn">▶ Sweep b through 360°</button>
+  </div>
+  <figcaption><strong>Figure 1 — Drag <b>a</b> (indigo) and <b>b</b> (teal); the amber vector is the projection of a onto b.</strong> Watch the dot product and cosine change sign as the angle crosses 90°. Hit "Sweep" to rotate <b>b</b> all the way around and see <code>a·b</code> trace positive → zero → negative → zero → positive. Make them perpendicular: the dot product hits exactly 0.</figcaption>
+</figure>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Projection — how much of a lies along b <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §3.8</a></h2>
+
+<p>The dot product answers a concrete geometric question: <em>if I shine a light straight down onto</em> <b>b</b><em>, how long is the shadow that</em> <b>a</b> <em>casts?</em> That shadow is the <strong>projection</strong>, and its signed length (the <em>scalar projection</em>) is:</p>
+
+<div class="mathband">$$ \text{comp}_\mathbf{b}\,\mathbf{a} \;=\; \frac{\mathbf{a}\cdot\mathbf{b}}{\lVert\mathbf{b}\rVert} \;=\; \lVert\mathbf{a}\rVert\cos\theta $$</div>
+
+<p>The full <strong>projection vector</strong> — the shadow as an actual arrow along <b>b</b> — scales the unit vector of <b>b</b> by that length:</p>
+
+<div class="mathband">$$ \text{proj}_\mathbf{b}\,\mathbf{a} \;=\; \frac{\mathbf{a}\cdot\mathbf{b}}{\mathbf{b}\cdot\mathbf{b}}\,\mathbf{b} $$</div>
+
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 460 300" role="img" aria-label="Projection of a onto b, with the perpendicular dropped from the tip of a">
+  <defs>
+    <marker id="ph-ind" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5A4FCF"/></marker>
+    <marker id="ph-teal" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#0E8C80"/></marker>
+    <marker id="ph-amb" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#B07514"/></marker>
+  </defs>
+  <g stroke="#C9C4B6" stroke-width="1.5"><path d="M50,250 H430 M50,40 V250"/></g>
+  <!-- origin (50,250). b direction to (330,110); a to (200,70) -->
+  <line x1="50" y1="250" x2="360" y2="130" stroke="#0E8C80" stroke-width="3" marker-end="url(#ph-teal)"/>
+  <line x1="50" y1="250" x2="200" y2="70" stroke="#5A4FCF" stroke-width="3" marker-end="url(#ph-ind)"/>
+  <!-- projection of a onto b: foot near (238,159) -->
+  <line x1="50" y1="250" x2="238" y2="177" stroke="#B07514" stroke-width="5" marker-end="url(#ph-amb)"/>
+  <!-- perpendicular drop from a tip (200,70) to foot (238,177) -->
+  <line x1="200" y1="70" x2="238" y2="177" stroke="#9C99A6" stroke-width="1.5" stroke-dasharray="5 5"/>
+  <rect x="228" y="163" width="14" height="14" fill="none" stroke="#9C99A6" stroke-width="1.2" transform="rotate(20 235 170)"/>
+  <text x="205" y="64" fill="#5A4FCF" font-family="JetBrains Mono, monospace" font-size="14" font-weight="600">a</text>
+  <text x="365" y="128" fill="#0E8C80" font-family="JetBrains Mono, monospace" font-size="14" font-weight="600">b</text>
+  <text x="150" y="235" fill="#B07514" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600">projₐ a onto b</text>
+</svg>
+<div class="dcap" style="margin-top:6px">The dot product = length of b × length of a's shadow on b</div>
+</div>
+<figcaption><strong>Figure 2 — Projection.</strong> Drop a perpendicular from the tip of <b>a</b> onto the line of <b>b</b>; the amber segment is the shadow. The dot product equals $\lVert\mathbf{b}\rVert$ times that shadow's length — which is why a bigger shadow (more agreement) means a bigger dot product.</figcaption>
+</figure>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Cosine similarity — the ML star</h2>
+
+<p>Here is the catch that makes the raw dot product dangerous for comparing things:
+it grows with <strong>length</strong>. A long document's embedding has a large magnitude,
+so its dot product with anything is large — even if it isn't especially <em>relevant</em>.
+The dot product conflates "agreement in direction" with "sheer size."</p>
+
+<p>The fix is to divide the magnitudes out, leaving only the angle. That is <strong>cosine
+similarity</strong> — literally $\cos\theta$ rearranged from the geometric definition:</p>
+
+<div class="mathband">$$ \cos\theta \;=\; \frac{\mathbf{a}\cdot\mathbf{b}}{\lVert\mathbf{a}\rVert\,\lVert\mathbf{b}\rVert} \;\in\; [-1,\; 1] $$</div>
+
+<aside class="side"><span class="lbl">Thread back</span>Cosine similarity is just the dot product of the two <b>unit vectors</b> (Session 1). Normalize both to length 1, then dot them — magnitude can't interfere. <a class="xref" href="../01_vectors/theory.html">↳ Session 1</a></aside>
+
+<details class="deeper"><summary>Going deeper — why cosine is guaranteed to stay in [−1, 1]</summary><div class="deep-body">
+  <p>It's not obvious that dividing by the magnitudes always lands in $[-1,1]$. The guarantee is the <strong>Cauchy–Schwarz inequality</strong>, one of the most important inequalities in all of math:</p>
+  <div class="mathband">$$ |\mathbf{a}\cdot\mathbf{b}| \;\le\; \lVert\mathbf{a}\rVert\,\lVert\mathbf{b}\rVert $$</div>
+  <p>Divide both sides by $\lVert\mathbf{a}\rVert\lVert\mathbf{b}\rVert$ (both positive) and you get $\left|\cos\theta\right| \le 1$ — exactly the bound. Equality holds only when <b>a</b> and <b>b</b> are parallel (same or opposite direction), which is why cosine reaches $\pm1$ only then. This inequality is also what makes the triangle inequality (Session 1's norm axioms) true. <span class="secs">See <b>MML §3.3</b>.</span></p>
+</div></details>
+
+<p>Now the score is bounded and pure: <strong>1</strong> = identical direction (maximally
+similar), <strong>0</strong> = unrelated (orthogonal), <strong>−1</strong> = opposite. This
+is the workhorse of modern ML retrieval:</p>
+
+<div class="callout c-good"><span class="tag">This is your OpsRAG retriever</span>
+OpsRAG embeds every Stack&nbsp;Overflow answer into a ~384-D vector and embeds the user's
+question the same way. It ranks answers by <strong>cosine similarity</strong> to the question —
+"closest direction wins." That is dense retrieval in one sentence, and it's this formula.
+(Vector databases like Chroma/FAISS are, at heart, "find the highest cosine similarity, fast.")</div>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>Length is a dot product (and orthogonality)</h2>
+
+<p>Two clean facts fall straight out of the definition and connect this session back to the last.</p>
+
+<p><strong>A vector dotted with itself is its squared length.</strong> Set $\mathbf{b}=\mathbf{a}$
+(so $\theta=0$, $\cos\theta=1$):</p>
+<div class="mathband">$$ \mathbf{a}\cdot\mathbf{a} = \sum a_i^2 = \lVert\mathbf{a}\rVert^2 \qquad\Longrightarrow\qquad \lVert\mathbf{a}\rVert = \sqrt{\mathbf{a}\cdot\mathbf{a}} $$</div>
+<p>That's the identity you proved by hand in Session 1's last exercise — now you know <em>why</em> it's true.</p>
+
+<p><strong>Zero means perpendicular.</strong> If $\mathbf{a}\cdot\mathbf{b}=0$ (and neither is
+the zero vector), the vectors are <strong>orthogonal</strong>. Orthogonality is a recurring
+star: independent features are (ideally) orthogonal, PCA finds orthogonal axes of variation
+(Session 7), and orthogonal directions carry non-redundant information.</p>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+a = np.array([<span class="n">4</span>, <span class="n">2</span>], dtype=<span class="k">float</span>)
+b = np.array([<span class="n">1</span>, <span class="n">3</span>], dtype=<span class="k">float</span>)
+
+<span class="f">print</span>(np.dot(a, b))          <span class="c"># 10.0   the dot product</span>
+<span class="f">print</span>(a @ b)                 <span class="c"># 10.0   the @ operator — same thing</span>
+<span class="f">print</span>(a &#64; a, np.linalg.norm(a)**<span class="n">2</span>)  <span class="c"># 20.0 20.0  a·a == |a|^2</span>
+
+<span class="c"># cosine similarity</span>
+<span class="k">def</span> <span class="f">cosine</span>(a, b):
+    <span class="k">return</span> np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+<span class="f">print</span>(<span class="f">cosine</span>(a, b))       <span class="c"># 0.7071...  ~45 degrees apart</span></pre>
+<div class="out">10.0
+10.0
+20.0 20.0
+0.7071067811865475</div>
+
+<div class="callout c-warn"><span class="tag">Use @ for vectors and matrices alike</span>
+The <code>@</code> operator is the dot product for 1-D vectors and matrix multiplication for
+2-D arrays — because, as Session 4 shows, <strong>matrix multiplication is just a grid of dot
+products</strong>. Learn <code>@</code> now; you'll use it constantly.</div>
+
+<!-- ═════════ 7 ═════════ -->
+<h2 id="s7"><span class="num">Section 7</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Linear / logistic regression</strong> — the prediction $\mathbf{w}\cdot\mathbf{x}+b$ is a dot product; training tunes <b>w</b>.</li>
+  <li><strong>Embedding search (OpsRAG, semantic search, recommendations)</strong> — rank by cosine similarity to the query vector.</li>
+  <li><strong>Transformer attention</strong> — each query vector is dotted with every key vector ($QK^\top$) to score relevance; those scores (scaled + softmaxed) decide how much of each value to read. Attention is <em>dot-product agreement</em> at scale.</li>
+  <li><strong>Every neural-network layer</strong> — a neuron computes a dot product of its inputs with its weights, then applies a nonlinearity. A layer is a batch of dot products (Session 4).</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+If Session 1 was "ML turns things into vectors," Session 2 is "ML compares vectors with the
+dot product." Similarity, prediction, and attention are all the same multiply-and-sum.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules & traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Shapes must match:</strong> the dot product needs two vectors of the <em>same</em> length; $[1,2]\cdot[1,2,3]$ is undefined.</li>
+  <li><strong>Order doesn't matter:</strong> $\mathbf{a}\cdot\mathbf{b}=\mathbf{b}\cdot\mathbf{a}$ (commutative) — unlike matrix multiplication later.</li>
+  <li><strong>Zero vector:</strong> $\mathbf{0}\cdot\mathbf{b}=0$ for any <b>b</b>, and cosine similarity is undefined (0/0) — guard it.</li>
+  <li><strong>cos θ can drift to 1.0000001</strong> from floating-point error; clamp to [−1, 1] before calling <code>arccos</code>.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Dot product = <strong>multiply component-wise, then sum</strong> → one scalar.</li>
+  <li>It equals $\lVert a\rVert\lVert b\rVert\cos\theta$ — its <strong>sign is agreement</strong> (+ / 0 / −).</li>
+  <li>For <em>similarity</em>, use <strong>cosine</strong> (normalize) — raw dot product is biased by length.</li>
+  <li>$\mathbf{a}\cdot\mathbf{a} = \lVert a\rVert^2$; zero dot product ⇒ <strong>perpendicular</strong>.</li>
+  <li>Use <code>@</code> — it's the dot product for vectors and matmul for matrices.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Comparing with raw dot product</span>
+Ranking documents by raw dot product favors <em>long</em> vectors regardless of relevance.
+Use cosine similarity (or normalize your embeddings once up front) so length can't cheat.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Forgetting to normalize embeddings</span>
+Many embedding models return already-normalized vectors — then dot product <em>is</em> cosine.
+If yours don't, normalize, or you'll silently rank by magnitude.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · arccos of 1.0000001</span>
+Floating-point can push cos θ just past ±1, making <code>np.arccos</code> return <code>nan</code>.
+Clamp with <code>np.clip(c, -1, 1)</code> first.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">Two embedding vectors have a large positive dot product but you're told they're <em>not</em> very similar in meaning. What's the most likely explanation?</div>
+  <button class="opt">Dot products can't measure similarity at all.</button>
+  <button class="opt">They must be perpendicular.</button>
+  <button class="opt">One or both vectors are long, so magnitude inflated the dot product — cosine similarity would be more honest.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="1">
+  <div class="qz">What does <code>a · b = 0</code> tell you (with non-zero vectors)?</div>
+  <button class="opt">a and b point the same way.</button>
+  <button class="opt">a and b are perpendicular (orthogonal) — no agreement.</button>
+  <button class="opt">a and b are opposite.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>, verifying each by hand first.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Compute $[3,-1,2]\cdot[2,4,1]$ by hand, then verify with <code>np.dot</code>.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$(3)(2)+(-1)(4)+(2)(1) = 6-4+2 = \mathbf{4}$.</p>
+    <pre class="code">np.dot([<span class="n">3</span>,<span class="n">-1</span>,<span class="n">2</span>], [<span class="n">2</span>,<span class="n">4</span>,<span class="n">1</span>])   <span class="c"># 4</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Are $[2,1]$ and $[-1,2]$ perpendicular? Decide with one dot product.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$(2)(-1)+(1)(2) = -2+2 = 0$ → <strong>yes, perpendicular.</strong></p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Write <code>cosine(a, b)</code> that returns cosine similarity and safely returns <code>0.0</code> if either vector is zero.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="k">def</span> <span class="f">cosine</span>(a, b):
+    a = np.asarray(a, <span class="k">float</span>); b = np.asarray(b, <span class="k">float</span>)
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    <span class="k">if</span> na == <span class="n">0</span> <span class="k">or</span> nb == <span class="n">0</span>: <span class="k">return</span> <span class="n">0.0</span>
+    <span class="k">return</span> <span class="f">float</span>(np.clip(np.dot(a, b) / (na * nb), <span class="n">-1</span>, <span class="n">1</span>))</pre>
+    <p>The <code>clip</code> guards <code>arccos</code>-style downstream use; the zero-check avoids <code>nan</code>.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Given a query <code>q=[1,0,1]</code> and three docs, rank them by cosine similarity: <code>d1=[1,0,1]</code>, <code>d2=[2,0,2]</code>, <code>d3=[0,1,0]</code>. Predict the ranking before running.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>cos(q,d1)=1, cos(q,d2)=1 (same direction, longer — <em>identical</em> cosine!), cos(q,d3)=0.
+    So d1 and d2 <strong>tie at the top</strong>, d3 last. This is the whole point of Section 4:
+    d2's larger magnitude did <em>not</em> beat d1 under cosine — but it <em>would</em> have under raw dot product.</p>
+    <pre class="code">for d in [d1,d2,d3]: print(cosine(q,d))   <span class="c"># 1.0, 1.0, 0.0</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Compute the projection <em>vector</em> of <code>a=[3,4]</code> onto <code>b=[1,0]</code> and explain in words what you get.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\text{proj}_b a = \frac{a\cdot b}{b\cdot b}b = \frac{3}{1}[1,0] = [3,0]$ — the <strong>x-component of a</strong>.
+    Projecting onto an axis extracts that coordinate; projecting onto <code>[0,1]</code> would give <code>[0,4]</code>.
+    This is exactly what "reading a coordinate" means geometrically, and it's the seed of changing basis in Session 5.</p>
+    <pre class="code">a=np.array([<span class="n">3</span>,<span class="n">4</span>]); b=np.array([<span class="n">1</span>,<span class="n">0</span>])
+(np.dot(a,b)/np.dot(b,b))*b        <span class="c"># [3. 0.]</span></pre>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What does the dot product measure, geometrically?</div><div class="a">How much two vectors agree in direction, scaled by their lengths: $\lVert a\rVert\lVert b\rVert\cos\theta$. Its sign tells you aligned (+), perpendicular (0), or opposing (−).</div></div>
+<div class="qa"><div class="q">Q2 · Dot product vs cosine similarity — when do you use each?</div><div class="a">Cosine when you care about direction only (semantic similarity, retrieval) because it removes the magnitude bias. Raw dot product when magnitude is meaningful, or when embeddings are already normalized (then they're equal).</div></div>
+<div class="qa"><div class="q">Q3 · How does attention use the dot product?</div><div class="a">Each query vector is dotted with every key vector ($QK^\top$) to score relevance; the scores are scaled by $1/\sqrt{d}$, softmaxed into weights, and used to combine the value vectors. It's dot-product similarity driving a weighted average.</div></div>
+<div class="qa"><div class="q">Q4 · Why might ranking documents by raw dot product be a bug?</div><div class="a">Longer vectors get larger dot products regardless of relevance, so length hijacks the ranking. Normalize (cosine) to fix it.</div></div>
+<div class="qa"><div class="q">Q5 · What does a zero dot product mean, and where does it show up in ML?</div><div class="a">The vectors are orthogonal (perpendicular) — no linear agreement. It underpins independent/uncorrelated directions and the orthogonal axes PCA finds.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>a·b = Σ aᵢbᵢ</td><td>Weighted sums; every linear model prediction</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>a·b = ‖a‖‖b‖cos θ</td><td>Turns algebra into an angle → agreement</td><td class="freq f-h">High</td></tr>
+  <tr><td>Sign of a·b</td><td>Aligned / orthogonal / opposing</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Projection</td><td>Extracting a component; changing basis (PCA)</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Cosine similarity</td><td>Embedding search, recommendations, RAG</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>a·a = ‖a‖²</td><td>Links dot product to length (Session 1)</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Dot product → attention</td><td>QKᵀ relevance scores in every transformer</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../03_matrices/theory.html" style="border:0;color:inherit">03 · Matrices as transformations →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">A matrix isn't a spreadsheet — it's a <em>machine that moves space</em>. We'll see how a grid of numbers rotates, stretches, and projects entire clouds of vectors at once — and why multiplying by one is just a batch of the dot products you just learned.</p>
+</div>
