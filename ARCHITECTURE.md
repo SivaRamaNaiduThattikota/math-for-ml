@@ -218,6 +218,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 08 — Derivatives & gradients** (drag-along-curve tangent-slope scrubber with function presets, MML §5.1 + differentiability deep-dive). **Calculus pillar begins.**
 - ✅ **Session 09 — Partial derivatives & the Jacobian** (drag-a-point-on-a-landscape gradient heat-map, MML §5.2/5.3 + steepest-ascent & Jacobian-chain-rule deep-dives).
 - ✅ **Session 10 — Chain rule & backprop** (single-neuron forward-pass + animated backprop sweep with weight slider, MML §5.2.2/5.6 + reverse-mode & vanishing-gradient deep-dive).
+- ✅ **Session 11 — Gradient descent** (loss-landscape descent-trajectory animator with learning-rate slider + surface presets, MML §7.1/7.2/7.3 + Lagrange-multiplier deep-dive). **Calculus pillar complete (08–11).**
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 - ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).

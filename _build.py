@@ -106,7 +106,15 @@ SESSIONS = [
               ("s3","3 · Backprop"),("s4","4 · Why reverse mode"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 11–18 get appended here as each _content.html is authored.
+    dict(num="11", slug="11_gradient_descent", title="Gradient descent",
+         lede="Step opposite the gradient, repeat. The learning rate sets the step, momentum "
+              "smooths the path — the optimization loop that turns gradients into a model.",
+         meta=["~22 min read", "NumPy paired notebook", "Prereq: Derivatives, Backprop"],
+         toc=[("s1","1 · The update rule"),("s2","2 · The learning rate"),
+              ("s3","3 · Batch / SGD / mini-batch"),("s4","4 · Momentum & Adam"),
+              ("s5","5 · Convexity & Lagrange"),("s6","6 · NumPy & ML"),("ref","Rules & traps"),
+              ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
+    # Sessions 12–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range

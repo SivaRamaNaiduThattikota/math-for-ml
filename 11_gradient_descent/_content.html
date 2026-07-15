@@ -1,0 +1,275 @@
+<p class="dropcap">Backprop (Session 10) hands you the gradient — the direction of steepest ascent of the loss. <strong>Gradient descent</strong> is what you <em>do</em> with it: take a small step the opposite way, recompute, repeat. That five-word loop — <em>step downhill, over and over</em> — is how essentially every model on earth is trained. Everything sophisticated in optimization (momentum, Adam, learning-rate schedules) is a refinement of this one idea.</p>
+
+<p>This session closes the calculus pillar by turning "we have the gradient" into "we have a trained model," and folds in the two ideas that decide whether training works: the <strong>learning rate</strong> and the shape of the <strong>loss landscape</strong>.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>State and apply the update rule $\mathbf{w}\leftarrow\mathbf{w}-\eta\nabla L$.</li>
+    <li>Explain the <strong>learning rate</strong> $\eta$ — and what too-small, too-large, and just-right look like.</li>
+    <li>Distinguish <strong>batch, stochastic, and mini-batch</strong> gradient descent.</li>
+    <li>Say what <strong>momentum</strong> and <strong>Adam</strong> add and why.</li>
+    <li>Connect <strong>convexity</strong> to whether GD finds the global minimum, and meet Lagrange multipliers.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§7.1 Optimization Using Gradient Descent, §7.2 Constrained Optimization &amp; Lagrange Multipliers, §7.3 Convex Optimization</span> (Chapter 7).</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">The update rule</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">The learning rate</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Batch / SGD / mini-batch</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Momentum & Adam</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">Convexity & Lagrange</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">NumPy & ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\eta$</span><span class="def">Learning rate — the step size along $-\nabla L$.</span>
+    <span class="sym">$\mathbf{w}\leftarrow\mathbf{w}-\eta\nabla L$</span><span class="def">The gradient-descent update.</span>
+    <span class="sym">$\beta$</span><span class="def">Momentum coefficient — how much past velocity carries over.</span>
+    <span class="sym">$\mathcal{L}=f+\lambda g$</span><span class="def">The Lagrangian — objective plus constraint × multiplier.</span>
+    <span class="sym">convex</span><span class="def">Bowl-shaped: every local minimum is the global minimum.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>The update rule <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §7.1</a></h2>
+
+<p>Gradient descent repeats one line: move each parameter a little way <em>opposite</em> its gradient (since $-\nabla L$ points downhill, Session 9), then recompute:</p>
+
+<div class="mathband">$$ \mathbf{w}_{t+1} = \mathbf{w}_t - \eta\,\nabla L(\mathbf{w}_t) $$</div>
+
+<p>The gradient gives the <em>direction</em> (steepest downhill); the learning rate $\eta$ sets the <em>step length</em>. Iterate and you roll toward a minimum. Set a starting point, pick a learning rate, and press Run below to watch the trajectory.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="gdplay" width="880" height="440"></canvas>
+    <div class="ctrlrow"><span class="lbl2">loss:</span>
+      <button class="ctrl" data-key="bowl">Bowl (convex)</button>
+      <button class="ctrl" data-key="valley">Valley (ill-conditioned)</button>
+      <button class="ctrl" data-key="double">Double well (non-convex)</button>
+    </div>
+    <div class="ctrlrow"><span class="lbl2">learning rate η:</span>
+      <input type="range" id="lrSlider" min="0.01" max="0.6" step="0.01" value="0.1" style="flex:1; accent-color:var(--accent); max-width:300px;">
+      <span id="rLR" class="vd">0.10</span>
+      <button class="btn-anim" id="runBtn" style="margin-top:0">▶ Run descent</button>
+    </div>
+    <div class="readout">
+      <span><span class="k">step</span> = <span class="vd" id="rStep">0</span></span>
+      <span><span class="k">loss</span> = <span class="va" id="rLoss">…</span></span>
+      <span id="rStatus" class="vs">drag the start dot, then Run</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Gradient descent on a loss landscape.</strong> Drag the start dot, set $\eta$, and press Run to trace the path. On the <b>Bowl</b> it slides straight in. On the <b>Valley</b>, small $\eta$ zig-zags slowly; nudge $\eta$ up and it converges faster — too far and it <em>diverges</em> (bounces out). On the <b>Double well</b> it settles into whichever minimum is nearest — the non-convex reality of deep nets.</figcaption>
+</figure>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The learning rate — the one knob that matters most</h2>
+
+<p>$\eta$ is the most important hyperparameter in machine learning, and the demo shows why:</p>
+<ul>
+  <li><strong>Too small</strong> — tiny steps; training is correct but painfully slow, and can stall in flat regions.</li>
+  <li><strong>Too large</strong> — steps overshoot the valley floor and bounce to the other side, higher than before; the loss <em>increases</em> and can blow up to <code>NaN</code>.</li>
+  <li><strong>Just right</strong> — fast, steady descent to the minimum.</li>
+</ul>
+<p>In practice you rarely use a single fixed $\eta$: <strong>learning-rate schedules</strong> start larger and decay over training (warmup + cosine decay is standard for transformers), getting fast early progress and fine settling later.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Think of tuning a forecast by nudging a parameter and re-checking the error each time. Nudge too timidly and it takes forever; nudge wildly and you overshoot and the error jumps around. Gradient descent automates that nudging — and $\eta$ is exactly "how big a nudge."</div>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Batch, stochastic &amp; mini-batch</h2>
+
+<p>The gradient of the loss is an average over training examples — but computing it over the <em>whole</em> dataset every step is expensive. Three flavours trade accuracy for speed:</p>
+<ul>
+  <li><strong>Batch GD</strong> — use all $N$ examples per step. Exact gradient, smooth path, but slow and memory-hungry.</li>
+  <li><strong>Stochastic GD (SGD)</strong> — one random example per step. Noisy, jittery path, but very fast updates — and the noise can help escape shallow traps.</li>
+  <li><strong>Mini-batch GD</strong> — a small batch (32–512). The practical default: mostly-smooth gradient, GPU-friendly, best of both. "SGD" in deep learning almost always means mini-batch.</li>
+</ul>
+
+<div class="callout c-why"><span class="tag">Why it matters</span>
+The mini-batch is why deep learning scales: you get a good-enough gradient from a handful of examples, take a step, and move on — thousands of times per epoch — instead of waiting to scan millions of rows for one perfect step.</div>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Momentum &amp; adaptive methods</h2>
+
+<p>Plain GD zig-zags across steep-and-narrow valleys (you saw it on the Valley preset). Two upgrades fix this:</p>
+<ul>
+  <li><strong>Momentum</strong> — accumulate a velocity that carries over between steps: $\mathbf{v}\leftarrow\beta\mathbf{v}-\eta\nabla L,\ \mathbf{w}\leftarrow\mathbf{w}+\mathbf{v}$. Consistent directions build speed; oscillations cancel out. Like a ball rolling downhill, it powers through flat spots and dampens zig-zag.</li>
+  <li><strong>Adaptive methods (RMSProp, Adam)</strong> — give <em>each</em> parameter its own effective learning rate, scaled by the recent size of its gradients. <strong>Adam</strong> (momentum + per-parameter scaling) is the default optimizer for most deep learning: robust, fast, forgiving of the initial $\eta$.</li>
+</ul>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>Convexity &amp; where descent lands <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §7.3</a></h2>
+
+<p>Whether gradient descent finds the <em>best</em> answer depends on the shape of the loss:</p>
+<ul>
+  <li><strong>Convex</strong> (bowl-shaped — linear/logistic regression, SVMs) — there's a single minimum, and GD is guaranteed to find it. Life is good.</li>
+  <li><strong>Non-convex</strong> (neural networks) — many local minima and saddle points. GD only guarantees a <em>local</em> minimum — yet in practice, with SGD noise and momentum, it reliably finds solutions that generalize well. Much of deep learning's mystery lives here.</li>
+</ul>
+
+<details class="deeper"><summary>Going deeper — constrained optimization &amp; Lagrange multipliers</summary><div class="deep-body">
+  <p>Sometimes you minimize $f(\mathbf{x})$ <em>subject to a constraint</em> $g(\mathbf{x})=0$ — e.g. maximize a margin subject to correct classification (SVMs). At the constrained optimum, the objective's gradient must be parallel to the constraint's gradient (you can't improve $f$ without violating $g$):</p>
+  <div class="mathband">$$ \nabla f = \lambda\,\nabla g \qquad\Longleftrightarrow\qquad \nabla\big(\underbrace{f - \lambda g}_{\text{Lagrangian }\mathcal{L}}\big)=\mathbf{0} $$</div>
+  <p>The scalar $\lambda$ is the <strong>Lagrange multiplier</strong>; you turn a constrained problem into an unconstrained one by optimizing the Lagrangian. This underpins SVMs (the dual problem), constrained ML, and regularization viewed as a constraint. <strong>Convex optimization</strong> (§7.3) is the theory that makes such problems solvable with guarantees. <span class="secs">See <b>MML §7.2–7.3</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="c"># minimize L(w) = (w - 3)^2  ->  grad = 2(w - 3), min at w = 3</span>
+grad = <span class="k">lambda</span> w: <span class="n">2</span>*(w - <span class="n">3</span>)
+w, eta = <span class="n">0.0</span>, <span class="n">0.1</span>
+<span class="k">for</span> t <span class="k">in</span> <span class="f">range</span>(<span class="n">40</span>):
+    w = w - eta * grad(w)          <span class="c"># the whole algorithm, one line</span>
+<span class="f">print</span>(w)                            <span class="c"># -> ~3.0</span>
+
+<span class="c"># linear regression by gradient descent (fit y = w x)</span>
+X = np.random.rand(<span class="n">200</span>); y = <span class="n">2.5</span>*X + <span class="n">0.1</span>*np.random.randn(<span class="n">200</span>)
+w = <span class="n">0.0</span>
+<span class="k">for</span> t <span class="k">in</span> <span class="f">range</span>(<span class="n">200</span>):
+    g = <span class="f">float</span>(np.mean(<span class="n">2</span>*X*(w*X - y)))   <span class="c"># dMSE/dw</span>
+    w -= <span class="n">0.5</span> * g
+<span class="f">print</span>(<span class="f">round</span>(w, <span class="n">2</span>))                    <span class="c"># -> ~2.5, recovers the slope</span></pre>
+<div class="out">2.9999...   # converged to the minimum
+2.5         # gradient descent learned the true slope</div>
+
+<ul>
+  <li><strong>The training loop</strong> is literally this: forward → loss → backprop for $\nabla L$ → <code>optimizer.step()</code> applies the update. Sessions 8–11 are that loop.</li>
+  <li><strong>Optimizer choice &amp; schedule</strong> (SGD+momentum, Adam, cosine decay, warmup) are among the highest-impact training decisions.</li>
+  <li><strong>Diagnosing training</strong> — a loss that explodes ⇒ $\eta$ too high; a loss that barely moves ⇒ $\eta$ too low or vanishing gradients (Session 10).</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Gradient descent is "step opposite the gradient, repeat." The learning rate sets the step; momentum/Adam refine the path; convexity decides whether the minimum is global. This loop, powered by backprop, <em>is</em> model training.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Diverging loss</strong> (grows / <code>NaN</code>) ⇒ learning rate too high — the classic first thing to lower.</li>
+  <li><strong>Plateau</strong> ⇒ $\eta$ too low, a flat/saddle region, or vanishing gradients. Momentum/Adam and better init help.</li>
+  <li><strong>Feature scaling matters</strong> (Session 1): unscaled features make elongated, ill-conditioned valleys → slow zig-zag. Standardize inputs.</li>
+  <li><strong>Local minima vs saddles:</strong> in high dimensions, saddle points dominate; momentum and SGD noise help escape them.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Update: <strong>$\mathbf{w}\leftarrow\mathbf{w}-\eta\nabla L$</strong> — direction from the gradient, step size from $\eta$.</li>
+  <li><strong>Learning rate</strong> is the key knob: too small = slow, too large = diverge. Use schedules.</li>
+  <li><strong>Mini-batch</strong> GD is the practical default; batch is exact-but-slow, SGD is noisy-but-fast.</li>
+  <li><strong>Momentum / Adam</strong> smooth zig-zag and adapt per-parameter — Adam is the common default.</li>
+  <li><strong>Convex</strong> ⇒ GD finds the global min; <strong>non-convex</strong> ⇒ only a local one (fine in practice).</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Learning rate too high</span>
+The #1 training failure: the loss oscillates or explodes to NaN. When training blows up, halve $\eta$ first.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Not scaling features</span>
+Unscaled inputs create long, narrow valleys where GD zig-zags for ages. StandardScaler up front (Session 1) is often the biggest speed-up.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Expecting the global minimum on a neural net</span>
+Non-convex losses have many minima and saddles; GD finds a <em>local</em> one. That's expected — and usually good enough. Don't chase "the" minimum.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">Your training loss climbs and then becomes NaN. Most likely cause?</div>
+  <button class="opt">Learning rate too small.</button>
+  <button class="opt">The dataset is too big.</button>
+  <button class="opt">Learning rate too large — steps overshoot and diverge. Lower η.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="0">
+  <div class="qz">Which best describes mini-batch gradient descent?</div>
+  <button class="opt">Estimate the gradient from a small batch each step — the GPU-friendly practical default.</button>
+  <button class="opt">Use the entire dataset for every single step.</button>
+  <button class="opt">Never use the gradient at all.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Minimize $L(w)=(w-3)^2$ from $w=0$ with $\eta=0.1$ for 40 steps. Where does it land?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">g=<span class="k">lambda</span> w:<span class="n">2</span>*(w-<span class="n">3</span>); w=<span class="n">0.0</span>
+<span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">40</span>): w-=<span class="n">0.1</span>*g(w)
+w   <span class="c"># ~3.0</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Repeat E1 with $\eta=1.1$. What happens, and why?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>It <strong>diverges</strong> — grows without bound. With $g=2(w-3)$, the update multiplies the distance-to-min by $|1-2\eta|$; for $\eta=1.1$ that's $1.2>1$, so the error grows each step.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Fit $y=wx$ by gradient descent on synthetic data with true slope 2.5. Recover $w$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">X=np.random.rand(<span class="n">200</span>); y=<span class="n">2.5</span>*X+<span class="n">0.1</span>*np.random.randn(<span class="n">200</span>); w=<span class="n">0.0</span>
+<span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">200</span>): w-=<span class="n">0.5</span>*np.mean(<span class="n">2</span>*X*(w*X-y))
+w   <span class="c"># ~2.5</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Sweep $\eta \in \{0.01, 0.1, 0.5, 1.0, 1.1\}$ on $L(w)=(w-3)^2$ and record the final $w$ after 30 steps. Which converge, which diverge?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\eta\le0.5$ converge (faster as $\eta$ grows toward 0.5); $\eta=1.0$ oscillates but stays bounded; $\eta=1.1$ diverges. The stability threshold here is $\eta<1$ (since curvature is 2, stable when $\eta<2/2=1$).</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Add momentum to E1: $v\leftarrow\beta v-\eta g,\ w\leftarrow w+v$ with $\beta=0.9,\eta=0.1$. Compare steps-to-converge against plain GD.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">g=<span class="k">lambda</span> w:<span class="n">2</span>*(w-<span class="n">3</span>); w,v=<span class="n">0.0</span>,<span class="n">0.0</span>
+<span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">40</span>): v=<span class="n">0.9</span>*v-<span class="n">0.1</span>*g(w); w+=v
+w   <span class="c"># reaches ~3 faster (may overshoot then settle)</span></pre>
+    <p>Momentum builds speed in the consistent downhill direction, converging in fewer steps (with a little overshoot) — the benefit is dramatic on ill-conditioned valleys.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · Write the gradient-descent update and explain each part.</div><div class="a">$\mathbf{w}\leftarrow\mathbf{w}-\eta\nabla L$: the gradient gives the steepest-ascent direction so we subtract it to go downhill; $\eta$ (learning rate) is the step size.</div></div>
+<div class="qa"><div class="q">Q2 · What happens if the learning rate is too high or too low?</div><div class="a">Too high: steps overshoot, the loss oscillates or diverges to NaN. Too low: correct but very slow, and prone to stalling. Schedules (decay/warmup) balance the two.</div></div>
+<div class="qa"><div class="q">Q3 · Batch vs stochastic vs mini-batch?</div><div class="a">Batch uses all data (exact, slow); SGD uses one sample (noisy, fast); mini-batch uses a small batch — the GPU-friendly default combining decent gradients with fast, frequent updates.</div></div>
+<div class="qa"><div class="q">Q4 · What do momentum and Adam add?</div><div class="a">Momentum accumulates velocity to smooth zig-zag and accelerate consistent directions. Adam adds per-parameter adaptive learning rates (plus momentum) — a robust default optimizer.</div></div>
+<div class="qa"><div class="q">Q5 · Convex vs non-convex — what does GD guarantee?</div><div class="a">Convex: a single global minimum GD provably reaches. Non-convex (neural nets): only a local minimum/saddle, but SGD noise and momentum usually find good solutions in practice.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>w ← w − η∇L</td><td>The training update, every step</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Learning rate η</td><td>The most important hyperparameter</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Batch / SGD / mini-batch</td><td>Speed vs accuracy; why mini-batch wins</td><td class="freq f-h">High</td></tr>
+  <tr><td>Momentum / Adam</td><td>Faster, more robust convergence</td><td class="freq f-h">High</td></tr>
+  <tr><td>Convexity</td><td>Global vs local minimum guarantees</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Lagrange multipliers</td><td>Constrained optimization; SVMs</td><td class="freq f-m">Medium</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next pillar</span>
+  <h3><a href="../12_probability_bayes/theory.html" style="border:0;color:inherit">12 · Probability & Bayes →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Linear algebra moved data; calculus optimized it. Now <em>probability</em> — reasoning under uncertainty. We start with the rules of probability and Bayes' theorem, the engine of updating beliefs from evidence.</p>
+</div>
