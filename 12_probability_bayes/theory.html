@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Probability & Bayes · Math for ML</title>
+<meta name="description" content="Reasoning under uncertainty. The sum and product rules, and Bayes' theorem — posterior ∝ likelihood × prior — the engine of updating beliefs.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Probability & Bayes · Math for ML">
+<meta property="og:description" content="Reasoning under uncertainty. The sum and product rules, and Bayes' theorem — posterior ∝ likelihood × prior — the engine of updating beliefs.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="12_probability_bayes">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · Probability basics</a>
+  <a href="#s2">2 · Joint/marginal/conditional</a>
+  <a href="#s3">3 · Independence</a>
+  <a href="#s4">4 · Bayes' theorem</a>
+  <a href="#s5">5 · The base rate</a>
+  <a href="#s6">6 · NumPy & ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Probability & Statistics · 12</div>
+    <h1>Probability & Bayes</h1>
+    <p class="lede">Reasoning under uncertainty. The sum and product rules, and Bayes' theorem — posterior ∝ likelihood × prior — the engine of updating beliefs.</p>
+    <div class="meta"><span>~20 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: none (probability start)</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">Linear algebra moved data; calculus optimized it. But models are never certain — they predict <em>probabilities</em>, learn from noisy data, and must reason about what they haven't seen. <strong>Probability</strong> is the language for that uncertainty, and <strong>Bayes' theorem</strong> is its engine: a precise rule for updating what you believe when new evidence arrives. Spam filters, medical-risk models, Naive Bayes, and the whole Bayesian view of machine learning are this one formula, applied.</p>
+
+<p>This session opens the probability pillar with the handful of rules everything rests on — and the famous, deeply counter-intuitive lesson of the base rate.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Use the basic rules of probability — sample space, events, and the axioms.</li>
+    <li>Work with <strong>joint, marginal, and conditional</strong> probability via the sum and product rules.</li>
+    <li>Test for <strong>independence</strong> and understand conditional independence (Naive Bayes).</li>
+    <li>Apply <strong>Bayes' theorem</strong>: posterior ∝ likelihood × prior.</li>
+    <li>Explain the <strong>base-rate</strong> effect — why a 99%-accurate test can still be usually wrong.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§6.1–6.2 Probability Spaces, §6.3 Sum Rule / Product Rule / Bayes' Theorem, §6.4 Independence</span> (Chapter 6).</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Probability basics</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Joint, marginal, conditional</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Independence</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Bayes' theorem</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">The base rate</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">NumPy & ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$P(A)$</span><span class="def">Probability of event $A$ — a number in $[0,1]$.</span>
+    <span class="sym">$P(A,B)$</span><span class="def">Joint probability — $A$ and $B$ both happen.</span>
+    <span class="sym">$P(A\mid B)$</span><span class="def">Conditional — probability of $A$ given $B$ is known.</span>
+    <span class="sym">$\perp\!\!\!\perp$</span><span class="def">Independent: $P(A,B)=P(A)P(B)$.</span>
+    <span class="sym">$P(H\mid E)$</span><span class="def">Posterior — belief in hypothesis $H$ after evidence $E$.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Probability basics <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.1</a></h2>
+
+<p>Start with a <strong>sample space</strong> $\Omega$ — all possible outcomes (for a die, $\{1,2,3,4,5,6\}$). An <strong>event</strong> is a subset of outcomes ("even" $=\{2,4,6\}$). A probability $P$ assigns each event a number obeying three axioms:</p>
+<ul>
+  <li>$0 \le P(A) \le 1$ — probabilities live between impossible and certain.</li>
+  <li>$P(\Omega) = 1$ — something must happen.</li>
+  <li>For mutually exclusive events, $P(A\text{ or }B)=P(A)+P(B)$ — disjoint chances add.</li>
+</ul>
+<p>Everything else — conditional probability, Bayes, entire probabilistic models — is built from these three lines.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Probability is just <em>normalized counting</em>. $P(A)$ = (rows where $A$) ÷ (total rows) — a <code>COUNT(*) FILTER (WHERE A) / COUNT(*)</code>. A conditional $P(A\mid B)$ restricts the denominator to rows where $B$ holds. You've been computing probabilities every time you wrote a rate or a percentage.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Joint, marginal &amp; conditional <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.3</a></h2>
+
+<p>With two variables you get three related quantities, tied together by two rules:</p>
+<ul>
+  <li><strong>Joint</strong> $P(A,B)$ — both happen.</li>
+  <li><strong>Marginal</strong> $P(A)$ — one alone, obtained by the <strong>sum rule</strong> (marginalizing out $B$): $\;P(A)=\sum_b P(A,b)$.</li>
+  <li><strong>Conditional</strong> $P(A\mid B)$ — $A$ given $B$, defined by the <strong>product rule</strong>:</li>
+</ul>
+
+<div class="mathband">$$ P(A\mid B) = \frac{P(A,B)}{P(B)} \qquad\Longleftrightarrow\qquad P(A,B) = P(A\mid B)\,P(B) $$</div>
+
+<p>Conditioning "zooms in" on the world where $B$ is true and renormalizes. The sum rule collapses a dimension; the product rule factors a joint into a chain of conditionals — together they're the entire algebra of probability.</p>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Independence <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.4</a></h2>
+
+<p>Two events are <strong>independent</strong> when knowing one tells you nothing about the other:</p>
+<div class="mathband">$$ P(A,B)=P(A)\,P(B) \qquad\Longleftrightarrow\qquad P(A\mid B)=P(A) $$</div>
+
+<p>Coin flips are independent; a card's suit and rank are independent; today's and tomorrow's weather are <em>not</em>. A subtler, ML-critical idea is <strong>conditional independence</strong>: $A$ and $B$ may be dependent overall but independent <em>once you know</em> $C$. The <strong>Naive Bayes</strong> classifier is built on assuming features are conditionally independent given the class — "naive," often false, yet remarkably effective (spam filters).</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Bayes' theorem <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.3</a></h2>
+
+<p>Because $P(A,B)$ can be factored two ways — $P(A\mid B)P(B)=P(B\mid A)P(A)$ — you can flip a conditional around. That's <strong>Bayes' theorem</strong>, the rule for updating a belief with evidence:</p>
+
+<div class="mathband">$$ \underbrace{P(H\mid E)}_{\text{posterior}} = \frac{\overbrace{P(E\mid H)}^{\text{likelihood}}\ \overbrace{P(H)}^{\text{prior}}}{\underbrace{P(E)}_{\text{evidence}}} \qquad P(E)=P(E\mid H)P(H)+P(E\mid \neg H)P(\neg H) $$</div>
+
+<p>In words: <strong>posterior ∝ likelihood × prior</strong>. Start with a prior belief in a hypothesis $H$; see evidence $E$; multiply by how likely that evidence is under $H$; renormalize. The demo below is the canonical case — a medical test — where the prior (how common the disease is) dominates the answer in a way most people find shocking.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="bayesplay" width="880" height="400"></canvas>
+    <div class="ctrlrow"><span class="lbl2">prevalence P(D):</span>
+      <input type="range" id="sPrev" min="0.005" max="0.5" step="0.005" value="0.01" style="flex:1;accent-color:var(--accent);max-width:220px;"><span id="rPrev" class="vd">1.0%</span></div>
+    <div class="ctrlrow"><span class="lbl2">sensitivity P(+|D):</span>
+      <input type="range" id="sSens" min="0.5" max="0.999" step="0.001" value="0.99" style="flex:1;accent-color:var(--accent);max-width:220px;"><span id="rSens" class="vd">99%</span></div>
+    <div class="ctrlrow"><span class="lbl2">specificity P(−|¬D):</span>
+      <input type="range" id="sSpec" min="0.5" max="0.999" step="0.001" value="0.95" style="flex:1;accent-color:var(--accent);max-width:220px;"><span id="rSpec" class="vd">95%</span></div>
+    <div class="readout">
+      <span><span class="k">P(disease | positive test)</span> = <span class="vs" id="rPost" style="font-size:1.1rem">…</span></span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — 1,000 people; each square is one person.</strong> <span style="color:#C13A57">■</span> sick &amp; tested positive (true positive), <span style="color:#eba0ac">■</span> sick &amp; missed, <span style="color:#B07514">■</span> healthy but tested positive (<b>false alarm</b>), <span style="color:#9C99A6">■</span> healthy &amp; negative. Of everyone who tests positive (the rose + amber squares), only a fraction are actually sick — that fraction is $P(D\mid +)$. With a rare disease, the amber false alarms swamp the true positives even for a 99% test.</figcaption>
+</figure>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>The base rate — why 99% accurate ≠ 99% sure</h2>
+
+<p>Take the demo's defaults: a disease affecting <strong>1%</strong> of people, a test with <strong>99% sensitivity</strong> and <strong>95% specificity</strong>. You test positive. How likely are you actually sick? Intuition screams "99%." Bayes says:</p>
+
+<div class="mathband">$$ P(D\mid +) = \frac{0.99\times 0.01}{\,0.99\times 0.01 + 0.05\times 0.99\,} = \frac{0.0099}{0.0594} \approx 0.167 $$</div>
+
+<p>Only <strong>≈ 17%</strong>. The reason: sick people are rare (1%), so even a small 5% false-positive rate applied to the <em>huge</em> healthy majority produces more false alarms than there are true cases. The prior (base rate) dominates. Ignoring it — <strong>base-rate neglect</strong> — is one of the most common and costly reasoning errors, in medicine and in ML (e.g. fraud/anomaly detection on rare positives).</p>
+
+<details class="deeper"><summary>Going deeper — deriving Bayes, and the "posterior ∝ likelihood × prior" shortcut</summary><div class="deep-body">
+  <p>The joint factors two ways: $P(H,E)=P(H\mid E)P(E)=P(E\mid H)P(H)$. Equate the right-hand sides and divide by $P(E)$ → Bayes. Because $P(E)$ doesn't depend on $H$, when you compare hypotheses you can drop it:</p>
+  <div class="mathband">$$ P(H\mid E) \;\propto\; P(E\mid H)\,P(H) $$</div>
+  <p>Compute likelihood × prior for each hypothesis, then normalize so they sum to 1. This "unnormalized posterior" is how Bayesian ML works in practice, and MAP estimation (Session 17) just picks the $H$ that maximizes it. The prior acts as a regularizer — a belief that survives unless the data strongly overrides it. <span class="secs">See <b>MML §6.3</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="c"># Bayes for the medical test</span>
+prev, sens, spec = <span class="n">0.01</span>, <span class="n">0.99</span>, <span class="n">0.95</span>
+p_pos = sens*prev + (<span class="n">1</span>-spec)*(<span class="n">1</span>-prev)          <span class="c"># P(+)  (evidence)</span>
+post  = sens*prev / p_pos                        <span class="c"># P(D | +)</span>
+<span class="f">print</span>(<span class="f">round</span>(post, <span class="n">3</span>))                          <span class="c"># 0.167</span>
+
+<span class="c"># posterior ∝ likelihood × prior, then normalize (two hypotheses)</span>
+prior = np.array([<span class="n">0.01</span>, <span class="n">0.99</span>])                    <span class="c"># [D, not-D]</span>
+like  = np.array([sens, <span class="n">1</span>-spec])                   <span class="c"># P(+ | each)</span>
+post  = prior*like / np.sum(prior*like)
+<span class="f">print</span>(post.round(<span class="n">3</span>))                          <span class="c"># [0.167 0.833]</span></pre>
+<div class="out">0.167
+[0.167 0.833]</div>
+
+<ul>
+  <li><strong>Naive Bayes classifiers</strong> — multiply per-feature likelihoods times the class prior (conditional-independence assumption); still a strong spam/text baseline.</li>
+  <li><strong>Priors as regularization</strong> — a prior over weights biases the model toward simpler solutions; MAP estimation (Session 17) is exactly "maximize likelihood × prior."</li>
+  <li><strong>Calibration &amp; decision thresholds</strong> — turning model scores into real probabilities, and choosing thresholds, is Bayes reasoning about base rates and costs.</li>
+  <li><strong>Anomaly / fraud detection</strong> — rare positives mean base rates dominate; a "high-accuracy" detector can still be mostly false alarms (this session's lesson, in production).</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Probability is normalized counting; the sum and product rules are its algebra; Bayes flips a conditional to update beliefs — posterior ∝ likelihood × prior. And always respect the base rate.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>$P(A\mid B)\ne P(B\mid A)$</strong> — the "prosecutor's fallacy." $P(+\mid \text{sick})$ is not $P(\text{sick}\mid +)$; Bayes is exactly the correction.</li>
+  <li><strong>Conditioning changes the denominator</strong> — $P(A\mid B)$ divides by $P(B)$, not by everything.</li>
+  <li><strong>Rare events + imperfect tests</strong> ⇒ most positives are false. Precision on rare classes is base-rate-limited.</li>
+  <li><strong>Independence is an assumption</strong> — Naive Bayes assumes it even when false; usually helps, sometimes hurts.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Probabilities are in $[0,1]$; $P(\Omega)=1$; disjoint events add.</li>
+  <li><strong>Product rule</strong> $P(A,B)=P(A\mid B)P(B)$; <strong>sum rule</strong> $P(A)=\sum_b P(A,b)$.</li>
+  <li><strong>Independent</strong> ⟺ $P(A,B)=P(A)P(B)$; watch for <em>conditional</em> independence (Naive Bayes).</li>
+  <li><strong>Bayes:</strong> $P(H\mid E)=\dfrac{P(E\mid H)P(H)}{P(E)}$ — posterior ∝ likelihood × prior.</li>
+  <li>Always fold in the <strong>base rate</strong>; a positive test on a rare condition is often a false alarm.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Confusing P(A|B) with P(B|A)</span>
+"99% of sick people test positive" does <em>not</em> mean "99% of positives are sick." Flipping requires Bayes and the base rate — getting this wrong misreads test results and model precision.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Ignoring the base rate</span>
+On rare positives (disease, fraud, defects), the prior dominates the posterior. A high-accuracy classifier can still have low precision. Report precision/recall, not just accuracy (your fraud project's lesson).</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Assuming independence blindly</span>
+Multiplying probabilities assumes independence. Correlated features break Naive Bayes' math even if predictions stay usable — know it's an approximation.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">A disease affects 1% of people; a test is 99% sensitive, 95% specific. You test positive. Roughly how likely are you sick?</div>
+  <button class="opt">99% — the test is very accurate.</button>
+  <button class="opt">About 50%.</button>
+  <button class="opt">About 17% — false positives from the healthy 99% outnumber true positives.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="0">
+  <div class="qz">"Posterior ∝ likelihood × prior" means…</div>
+  <button class="opt">Multiply how well each hypothesis explains the evidence by its prior belief, then normalize.</button>
+  <button class="opt">The prior is irrelevant once you have data.</button>
+  <button class="opt">P(A|B) always equals P(B|A).</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>A fair die is rolled. $P(\text{even})$? $P(\text{even}\mid \text{>3})$? Are "even" and ">3" independent?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$P(\text{even})=3/6=1/2$. Given $>3$ ($\{4,5,6\}$): evens are $\{4,6\}$ → $2/3$. Since $1/2\ne2/3$, they're <strong>not independent</strong>.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Compute $P(D\mid +)$ for prevalence 1%, sensitivity 99%, specificity 95% (verify the ≈17%).</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">prev,sens,spec=<span class="n">0.01</span>,<span class="n">0.99</span>,<span class="n">0.95</span>
+sens*prev/(sens*prev+(<span class="n">1</span>-spec)*(<span class="n">1</span>-prev))   <span class="c"># 0.1667</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Keep sensitivity/specificity fixed; raise prevalence to 10%. What does $P(D\mid +)$ become, and why the jump?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\frac{0.99\cdot0.10}{0.99\cdot0.10+0.05\cdot0.90}=\frac{0.099}{0.144}\approx0.69$. Higher base rate ⇒ true positives now outnumber false alarms ⇒ posterior jumps from 17% to ~69%. The prior drives the answer.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Two independent coin flips. $P(\text{two heads})$? $P(\text{at least one head})$? Show the second via the complement.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Two heads: $0.5\times0.5=0.25$. At least one head $=1-P(\text{no heads})=1-0.25=0.75$.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Tiny Naive Bayes: classes A (prior 0.3) and B (0.7); a word has $P(\text{word}\mid A)=0.8$, $P(\text{word}\mid B)=0.1$. Given the word appears, which class, and with what posterior?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">prior=np.array([<span class="n">0.3</span>,<span class="n">0.7</span>]); like=np.array([<span class="n">0.8</span>,<span class="n">0.1</span>])
+post=prior*like/ (prior*like).sum()
+post   <span class="c"># [0.774 0.226] -> class A wins despite lower prior</span></pre>
+    <p>Posterior ≈ [0.77, 0.23] → <strong>A</strong>. The strong likelihood (0.8 vs 0.1) overrides B's larger prior.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · State the sum and product rules.</div><div class="a">Product: $P(A,B)=P(A\mid B)P(B)$. Sum (marginalization): $P(A)=\sum_b P(A,b)$. Together they generate all of probability.</div></div>
+<div class="qa"><div class="q">Q2 · Write Bayes' theorem and name each term.</div><div class="a">$P(H\mid E)=\frac{P(E\mid H)P(H)}{P(E)}$ — posterior = likelihood × prior ÷ evidence. Posterior ∝ likelihood × prior.</div></div>
+<div class="qa"><div class="q">Q3 · Why can a 99%-accurate test give a positive that's probably wrong?</div><div class="a">Base rate. If the condition is rare, false positives from the large healthy population outnumber true positives, so $P(\text{sick}\mid +)$ is low despite high test accuracy.</div></div>
+<div class="qa"><div class="q">Q4 · What does Naive Bayes assume?</div><div class="a">That features are conditionally independent given the class, so their likelihoods multiply. Often false but frequently effective, especially for text.</div></div>
+<div class="qa"><div class="q">Q5 · How do priors relate to regularization?</div><div class="a">A prior over parameters biases the estimate toward certain values; MAP estimation maximizes likelihood × prior, and common priors (Gaussian/Laplace) correspond to L2/L1 regularization.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Probability axioms</td><td>Foundation of all probabilistic models</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Sum & product rules</td><td>Marginalize, condition, factor joints</td><td class="freq f-h">High</td></tr>
+  <tr><td>Independence</td><td>Naive Bayes; factorized models</td><td class="freq f-h">High</td></tr>
+  <tr><td>Bayes' theorem</td><td>Updating beliefs; the Bayesian view of ML</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Base rate</td><td>Precision on rare classes; fraud/medical</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Posterior ∝ likelihood × prior</td><td>MAP, priors as regularization</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../13_distributions/theory.html" style="border:0;color:inherit">13 · Distributions →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Probability spread over values is a <em>distribution</em>. We'll meet the workhorses — Bernoulli, binomial, and the Gaussian — plus the multivariate Gaussian that powers so much of ML.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 12 — Bayes base-rate visualizer: 1,000 people as an icon array
+(function(){
+  const cv=document.getElementById('bayesplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, COLS=40, ROWS=25, N=COLS*ROWS;
+  const CW=Math.floor(W/COLS), CH=Math.floor((H-14)/ROWS), TOP=8;
+  const COL={TP:'#C13A57', FN:'#EBA0AC', FP:'#B07514', TN:'#9C99A6'};
+  let prev=0.01, sens=0.99, spec=0.95;
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const sick=Math.round(N*prev), healthy=N-sick;
+    const TP=Math.round(sick*sens), FN=sick-TP;
+    const FP=Math.round(healthy*(1-spec)), TN=healthy-FP;
+    const cats=[]; // order: TP, FN, FP, TN
+    for(let k=0;k<TP;k++)cats.push('TP');
+    for(let k=0;k<FN;k++)cats.push('FN');
+    for(let k=0;k<FP;k++)cats.push('FP');
+    for(let k=0;k<TN;k++)cats.push('TN');
+    for(let i=0;i<N;i++){
+      const col=i%COLS, row=(i/COLS)|0;
+      ctx.fillStyle=COL[cats[i]]||'#9C99A6';
+      ctx.fillRect(col*CW+1, TOP+row*CH+1, CW-2, CH-2);
+    }
+    upd(TP,FP);
+  }
+  function upd(TP,FP){
+    const el=id=>document.getElementById(id);
+    el('rPrev').textContent=(prev*100).toFixed(1)+'%';
+    el('rSens').textContent=Math.round(sens*100)+'%';
+    el('rSpec').textContent=Math.round(spec*100)+'%';
+    const post = sens*prev/(sens*prev+(1-spec)*(1-prev));
+    el('rPost').textContent = (post*100).toFixed(1)+'%  ('+TP+' true / '+(TP+FP)+' positives)';
+    el('rPost').style.color = post<0.5 ? '#C13A57' : '#0E8C80';
+  }
+  const bind=(id,setter,fmt)=>{ const s=document.getElementById(id); if(s) s.addEventListener('input',()=>{setter(parseFloat(s.value));draw();}); };
+  bind('sPrev',v=>prev=v); bind('sSens',v=>sens=v); bind('sSpec',v=>spec=v);
+  draw();
+})();
+</script>
+</body>
+</html>

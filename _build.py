@@ -114,7 +114,15 @@ SESSIONS = [
               ("s3","3 · Batch / SGD / mini-batch"),("s4","4 · Momentum & Adam"),
               ("s5","5 · Convexity & Lagrange"),("s6","6 · NumPy & ML"),("ref","Rules & traps"),
               ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
-    # Sessions 12–18 get appended here as each _content.html is authored.
+    dict(num="12", slug="12_probability_bayes", title="Probability & Bayes",
+         lede="Reasoning under uncertainty. The sum and product rules, and Bayes' theorem — "
+              "posterior ∝ likelihood × prior — the engine of updating beliefs.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: none (probability start)"],
+         toc=[("s1","1 · Probability basics"),("s2","2 · Joint/marginal/conditional"),
+              ("s3","3 · Independence"),("s4","4 · Bayes' theorem"),("s5","5 · The base rate"),
+              ("s6","6 · NumPy & ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 13–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range
