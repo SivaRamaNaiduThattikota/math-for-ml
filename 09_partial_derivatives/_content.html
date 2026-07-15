@@ -1,0 +1,270 @@
+<p class="dropcap">A real loss doesn't depend on one weight — it depends on millions, all at once. Session 8's single-variable slope has to grow up. The <strong>partial derivative</strong> is how: to find the slope in the "$w_5$ direction," you nudge $w_5$ and hold every other weight frozen. Do that for each input and stack the answers into a vector, and you've built the <strong>gradient</strong> — the exact object backpropagation computes and gradient descent follows.</p>
+
+<p>This session turns "the slope" into "the slope in every direction," and introduces the <strong>Jacobian</strong> — the matrix that appears the moment your function outputs a vector, which is what makes the chain rule (Session 10) tick.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Compute a <strong>partial derivative</strong> — vary one input, hold the rest constant.</li>
+    <li>Assemble partials into the <strong>gradient</strong> $\nabla f$ and know it's perpendicular to the level curves.</li>
+    <li>Use the <strong>directional derivative</strong> $\nabla f\cdot\mathbf{u}$ and see why the gradient is the steepest direction.</li>
+    <li>Read the <strong>Jacobian</strong> as the matrix of all partials of a vector-valued function.</li>
+    <li>Connect all of it to loss gradients and backprop.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§5.2 Partial Differentiation &amp; Gradients, §5.3 Gradients of Vector-Valued Functions (the Jacobian)</span>.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Partial derivatives</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">The gradient</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Directional derivative</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">The Jacobian</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\frac{\partial f}{\partial x}$</span><span class="def">Partial derivative — slope in $x$ with other inputs held fixed.</span>
+    <span class="sym">$\nabla f$</span><span class="def">The gradient — vector of all partials; points steepest uphill.</span>
+    <span class="sym">$\nabla f\cdot\mathbf{u}$</span><span class="def">Directional derivative — slope along a unit direction $\mathbf{u}$.</span>
+    <span class="sym">$J$</span><span class="def">The Jacobian — matrix of all partials of a vector-valued $f$.</span>
+    <span class="sym">$H$</span><span class="def">The Hessian — matrix of second partials (curvature).</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Partial derivatives — one knob at a time <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §5.2</a></h2>
+
+<p>For a function of several inputs like $f(x,y)$, the <strong>partial derivative</strong> $\frac{\partial f}{\partial x}$ is just the ordinary derivative <em>in the $x$ direction</em>, treating $y$ as a constant:</p>
+
+<div class="mathband">$$ f(x,y)=x^2+y^2 \;\Rightarrow\; \frac{\partial f}{\partial x}=2x, \quad \frac{\partial f}{\partial y}=2y $$</div>
+
+<p>Freeze $y$, differentiate in $x$ as usual (so $y^2$ is a constant and vanishes); then freeze $x$ and do $y$. Each partial answers "if I move along <em>this</em> axis only, how fast does $f$ change?" In the heat-map below, drag the point and read both partials plus the gradient arrow.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="gplay" width="880" height="470"></canvas>
+    <div class="ctrlrow"><span class="lbl2">f(x,y):</span>
+      <button class="ctrl" data-key="bowl">x² + y²</button>
+      <button class="ctrl" data-key="saddle">x² − y²</button>
+      <button class="ctrl" data-key="ellipse">0.4x² + 1.6y²</button>
+      <button class="ctrl" data-key="ripple">sin x + cos y</button>
+    </div>
+    <div class="readout">
+      <span><span class="k">∂f/∂x</span> = <span class="va" id="rFx">…</span></span>
+      <span><span class="k">∂f/∂y</span> = <span class="vb" id="rFy">…</span></span>
+      <span><span class="k">‖∇f‖</span> = <span class="vs" id="rMag">…</span></span>
+      <span id="rNote" class="vd">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Drag the point across the landscape.</strong> Colour is the value of $f$ (banded into level sets, like a contour map). The amber arrow is the <b>gradient</b> $\nabla f=[\partial f/\partial x,\ \partial f/\partial y]$ — notice it always points "uphill" toward brighter bands and sits <em>perpendicular</em> to the colour bands. On the <b>bowl</b> it points outward from the minimum; on the <b>saddle</b> it does something more interesting.</figcaption>
+</figure>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+It's a "hold-all-else-equal" sensitivity: how much does revenue change if I move <em>price</em> alone, keeping units and cost fixed? A partial derivative is that ceteris-paribus slope, one variable at a time. ML asks it for every parameter simultaneously.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The gradient — assembled from partials</h2>
+
+<p>Collect the partials into a vector and you have the <strong>gradient</strong>:</p>
+<div class="mathband">$$ \nabla f = \left[\frac{\partial f}{\partial x_1},\ \dots,\ \frac{\partial f}{\partial x_n}\right] $$</div>
+
+<p>Three facts to internalise (all visible in the demo):</p>
+<ul>
+  <li>It <strong>points in the direction of steepest ascent</strong> — the fastest way to increase $f$.</li>
+  <li>Its <strong>magnitude $\lVert\nabla f\rVert$ is the steepness</strong> of that climb (0 at a flat critical point).</li>
+  <li>It is <strong>perpendicular to the level curves</strong> (contours of constant $f$) — moving along a contour doesn't change $f$, so the steepest change is across them.</li>
+</ul>
+
+<div class="callout c-why"><span class="tag">Why it matters</span>
+Gradient descent updates every parameter at once: $\mathbf{w}\leftarrow\mathbf{w}-\eta\,\nabla L(\mathbf{w})$. The gradient is <em>the</em> object being computed billions of times in training. Everything about optimization is "find $\nabla L$, step against it."</div>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>The directional derivative</h2>
+
+<p>What if you want the slope in some <em>arbitrary</em> direction $\mathbf{u}$ (a unit vector), not just along an axis? It's the dot product of the gradient with that direction — Session 2 returning:</p>
+
+<div class="mathband">$$ D_\mathbf{u}f = \nabla f \cdot \mathbf{u} = \lVert\nabla f\rVert\cos\theta $$</div>
+
+<details class="deeper"><summary>Going deeper — why the gradient is the steepest direction</summary><div class="deep-body">
+  <p>The directional derivative $\nabla f\cdot\mathbf{u} = \lVert\nabla f\rVert\lVert\mathbf{u}\rVert\cos\theta = \lVert\nabla f\rVert\cos\theta$ (since $\mathbf{u}$ is a unit vector). This is largest when $\cos\theta=1$, i.e. when $\mathbf{u}$ points the <em>same way as</em> $\nabla f$. So among all directions, the gradient gives the maximum rate of increase — that's the precise meaning of "steepest ascent." When $\mathbf{u}\perp\nabla f$ ($\cos\theta=0$) the slope is zero — that's why you move along a contour without changing $f$. This is the Cauchy–Schwarz bound from Session 2 doing real work. <span class="secs">See <b>MML §5.2</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>The Jacobian — when the output is a vector <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §5.3</a></h2>
+
+<p>So far $f$ output a single number. But a neural-network layer maps a vector <em>to</em> a vector, $\mathbf{f}:\mathbb{R}^n\to\mathbb{R}^m$. Its derivative is a whole <strong>matrix of partials</strong> — the <strong>Jacobian</strong> $J$, with one row per output and one column per input:</p>
+
+<div class="mathband">$$ J = \begin{bmatrix} \frac{\partial f_1}{\partial x_1} & \cdots & \frac{\partial f_1}{\partial x_n} \\ \vdots & \ddots & \vdots \\ \frac{\partial f_m}{\partial x_1} & \cdots & \frac{\partial f_m}{\partial x_n} \end{bmatrix} \quad (m\times n) $$</div>
+
+<p>It's the natural generalization: a scalar output ($m=1$) makes the Jacobian a single row — exactly the gradient (transposed). The Jacobian is the <em>local linear approximation</em> of $\mathbf{f}$: near a point, $\mathbf{f}$ behaves like the matrix $J$ (Session 3's transformations, now as the best linear fit to a curved map).</p>
+
+<details class="deeper"><summary>Going deeper — Jacobians and the chain rule (backprop preview)</summary><div class="deep-body">
+  <p>When you compose functions — which is exactly what a deep network does — their derivatives compose by <strong>multiplying Jacobians</strong>: $\;\frac{\partial (\mathbf{f}\circ\mathbf{g})}{\partial \mathbf{x}} = J_\mathbf{f}\,J_\mathbf{g}$. A network is a long chain of layers, so its overall Jacobian is a product of per-layer Jacobians. Backpropagation is nothing more than evaluating that product efficiently, right-to-left, so a scalar loss's gradient flows back through every layer. The second-derivative analogue, the <strong>Hessian</strong> $H$ (matrix of $\partial^2 f/\partial x_i\partial x_j$), captures curvature and underlies Newton's method. <span class="secs">See <b>MML §5.3</b>; the mechanics are Session 10.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> <span class="f">f</span>(p):                      <span class="c"># f(x,y) = x^2 + y^2</span>
+    x, y = p
+    <span class="k">return</span> x**<span class="n">2</span> + y**<span class="n">2</span>
+
+<span class="k">def</span> <span class="f">grad</span>(f, p, h=<span class="n">1e-5</span>):        <span class="c"># numerical gradient: one partial per input</span>
+    p = np.asarray(p, <span class="k">float</span>); g = np.zeros_like(p)
+    <span class="k">for</span> i <span class="k">in</span> <span class="f">range</span>(len(p)):
+        step = np.zeros_like(p); step[i] = h
+        g[i] = (f(p+step) - f(p-step)) / (<span class="n">2</span>*h)
+    <span class="k">return</span> g
+
+<span class="f">print</span>(<span class="f">grad</span>(f, [<span class="n">3.0</span>, <span class="n">4.0</span>]))    <span class="c"># [6. 8.]  == [2x, 2y]</span>
+<span class="f">print</span>(np.linalg.norm(<span class="f">grad</span>(f, [<span class="n">3.</span>, <span class="n">4.</span>])))  <span class="c"># 10.0  steepness</span></pre>
+<div class="out">[6. 8.]
+10.0</div>
+
+<div class="callout c-warn"><span class="tag">In real code, autodiff builds the Jacobian for you</span>
+The loop above is a fine gradient <em>check</em>, but frameworks compute exact gradients and Jacobians automatically: PyTorch's <code>torch.autograd.functional.jacobian</code>, or just <code>loss.backward()</code> to get <code>∂loss/∂params</code>. Understanding the Jacobian tells you <em>what</em> those calls return and why shapes line up.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>The loss gradient.</strong> $\nabla_\mathbf{w}L$ has one partial per parameter — the update direction for every weight, computed each step.</li>
+  <li><strong>Backprop = chained Jacobians.</strong> Each layer contributes a Jacobian; the gradient is their product evaluated backward (Session 10).</li>
+  <li><strong>Contours & optimization paths.</strong> Because the gradient is ⟂ to contours, descent zig-zags across them — and elongated contours (ill-conditioning) cause slow zig-zagging, motivating momentum/Adam.</li>
+  <li><strong>Sensitivity analysis.</strong> Partials tell you which inputs a model is most sensitive to (feature attribution, saliency maps).</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+A partial is a slope in one direction; the gradient stacks them and points steepest uphill (⟂ to contours); the Jacobian stacks gradients for vector outputs. Backprop multiplies Jacobians — which is the next session.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Gradient is a vector, not a number</strong> — one component per input. Its <em>direction</em> and <em>magnitude</em> both carry meaning.</li>
+  <li><strong>$\nabla f=\mathbf{0}$</strong> marks a critical point (min, max, or saddle) — in high dimensions, saddles vastly outnumber minima.</li>
+  <li><strong>Jacobian shape is $m\times n$</strong> (outputs × inputs). Getting rows/columns backwards is the classic backprop shape bug.</li>
+  <li><strong>Scalar output</strong> ⇒ Jacobian is $1\times n$ = $\nabla f^\top$; people use "gradient" and "Jacobian" loosely — check the shape.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>A <strong>partial</strong> $\partial f/\partial x_i$ = slope in one input, others held constant.</li>
+  <li>The <strong>gradient</strong> stacks the partials; it points steepest ascent and is <strong>⟂ to level curves</strong>.</li>
+  <li><strong>Directional derivative</strong> $=\nabla f\cdot\mathbf{u}$; maximal along the gradient (Cauchy–Schwarz).</li>
+  <li>The <strong>Jacobian</strong> ($m\times n$) is the matrix of partials of a vector-valued function; scalar output ⇒ it's the gradient row.</li>
+  <li>Backprop <strong>multiplies Jacobians</strong> down the network (Session 10).</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Treating the gradient as a scalar</span>
+$\nabla f$ is a vector living in input space. Its length is the steepness, its direction is which way is up — you lose half the information if you only look at magnitude.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Jacobian row/column confusion</span>
+Rows = outputs, columns = inputs → shape $m\times n$. Transposing it by accident is the #1 cause of shape errors in hand-written backprop.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Assuming ∇f = 0 means a minimum</span>
+In high dimensions it's usually a saddle. That's why plain gradient descent stalls and momentum/adaptive methods help (Session 11).</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">For $f(x,y)=x^2+y^2$, what is $\nabla f$ at the point $(1,0)$?</div>
+  <button class="opt">[0, 2]</button>
+  <button class="opt">[2, 0] — pointing straight out along x, away from the minimum.</button>
+  <button class="opt">[1, 1]</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">A function maps ℝ⁴ → ℝ³. What's the shape of its Jacobian?</div>
+  <button class="opt">4 × 3</button>
+  <button class="opt">4 × 4</button>
+  <button class="opt">3 × 4 (outputs × inputs)</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>For $f(x,y)=3x^2+xy+y^3$, find both partials by hand, then evaluate $\nabla f$ at $(1,2)$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\partial f/\partial x=6x+y$, $\partial f/\partial y=x+3y^2$. At $(1,2)$: $\nabla f=[6+2,\ 1+12]=[8,13]$.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Where is $\nabla f=\mathbf{0}$ for $f(x,y)=x^2+y^2$? What point is it?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$[2x,2y]=[0,0]$ at the origin $(0,0)$ — the global minimum (bottom of the bowl).</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Write a numerical <code>grad(f, p)</code> and confirm it gives $[2x,2y]$ for $x^2+y^2$ at a few points.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="k">def</span> <span class="f">grad</span>(f,p,h=<span class="n">1e-5</span>):
+    p=np.asarray(p,<span class="k">float</span>); g=np.zeros_like(p)
+    <span class="k">for</span> i <span class="k">in</span> <span class="f">range</span>(len(p)):
+        s=np.zeros_like(p); s[i]=h; g[i]=(f(p+s)-f(p-s))/(<span class="n">2</span>*h)
+    <span class="k">return</span> g
+grad(<span class="k">lambda</span> p:p[<span class="n">0</span>]**<span class="n">2</span>+p[<span class="n">1</span>]**<span class="n">2</span>, [<span class="n">3</span>,<span class="n">4</span>])   <span class="c"># [6. 8.]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>At $(1,1)$ on $f=x^2+y^2$, compute the directional derivative along $\mathbf{u}=[1,0]$ and along the gradient direction. Which is larger, and why?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\nabla f=[2,2]$. Along $[1,0]$: $\nabla f\cdot[1,0]=2$. Along $\hat{\nabla f}=[1,1]/\sqrt2$: $\nabla f\cdot\hat{\nabla f}=\lVert\nabla f\rVert=\sqrt8\approx2.83$ — larger, because the gradient direction is steepest.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>The map $\mathbf{f}(x,y)=[x^2y,\ x+\sin y]$ goes ℝ²→ℝ². Write its 2×2 Jacobian by hand and evaluate at $(1,0)$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$J=\begin{bmatrix}2xy & x^2\\ 1 & \cos y\end{bmatrix}$. At $(1,0)$: $\begin{bmatrix}0 & 1\\ 1 & 1\end{bmatrix}$.</p>
+    <pre class="code"><span class="c"># verify a column numerically: partial wrt x at (1,0)</span>
+h=<span class="n">1e-5</span>; F=<span class="k">lambda</span> x,y:np.array([x*x*y, x+np.sin(y)])
+(F(<span class="n">1</span>+h,<span class="n">0</span>)-F(<span class="n">1</span>-h,<span class="n">0</span>))/(<span class="n">2</span>*h)   <span class="c"># [0. 1.] -> first column</span></pre>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What's a partial derivative?</div><div class="a">The derivative with respect to one variable, holding the others constant — the slope of the function along that single axis.</div></div>
+<div class="qa"><div class="q">Q2 · What does the gradient represent, and how does it relate to contours?</div><div class="a">The vector of all partials; it points in the direction of steepest ascent, its length is the steepness, and it's perpendicular to the level curves of the function.</div></div>
+<div class="qa"><div class="q">Q3 · Why is the gradient the direction of steepest ascent?</div><div class="a">The directional derivative $\nabla f\cdot\mathbf{u}=\lVert\nabla f\rVert\cos\theta$ is maximized when $\mathbf{u}$ aligns with $\nabla f$ (Cauchy–Schwarz), so no direction increases $f$ faster.</div></div>
+<div class="qa"><div class="q">Q4 · What is the Jacobian and its shape?</div><div class="a">The matrix of all partials of a vector-valued function $\mathbb{R}^n\to\mathbb{R}^m$; shape $m\times n$ (outputs × inputs). For scalar output it's the gradient (as a row).</div></div>
+<div class="qa"><div class="q">Q5 · How does the Jacobian connect to backprop?</div><div class="a">Composed functions' derivatives multiply their Jacobians; a network is a composition, so backprop evaluates the product of per-layer Jacobians backward to get the loss gradient.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Partial derivative</td><td>Slope w.r.t. one parameter</td><td class="freq f-h">High</td></tr>
+  <tr><td>Gradient ∇f</td><td>The update direction for all weights</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>⟂ to level curves</td><td>Why descent zig-zags; ill-conditioning</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Directional derivative</td><td>Gradient = steepest (Cauchy–Schwarz)</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Jacobian (m×n)</td><td>Vector-output derivative; backprop</td><td class="freq f-h">High</td></tr>
+  <tr><td>Hessian</td><td>Curvature; Newton / second-order</td><td class="freq f-m">Medium</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../10_chain_rule_backprop/theory.html" style="border:0;color:inherit">10 · Chain rule & backprop →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Networks are compositions of functions. The chain rule differentiates compositions — and running it backward through the layers <em>is</em> backpropagation, the algorithm that trains every neural net.</p>
+</div>

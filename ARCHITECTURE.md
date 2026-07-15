@@ -216,6 +216,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 06 — Eigenvalues & eigenvectors** (drag-v-watch-Av eigenline finder with matrix presets incl. rotation, MML §4.2/4.4 + char-poly & diagonalization deep-dives).
 - ✅ **Session 07 — SVD, PCA & low-rank** (drag-the-columns circle→ellipse SVD visualizer with singular axes, MML §4.5 + Ch 10 + PCA-via-SVD deep-dive). **Linear Algebra pillar complete (01–07).**
 - ✅ **Session 08 — Derivatives & gradients** (drag-along-curve tangent-slope scrubber with function presets, MML §5.1 + differentiability deep-dive). **Calculus pillar begins.**
+- ✅ **Session 09 — Partial derivatives & the Jacobian** (drag-a-point-on-a-landscape gradient heat-map, MML §5.2/5.3 + steepest-ascent & Jacobian-chain-rule deep-dives).
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 - ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).

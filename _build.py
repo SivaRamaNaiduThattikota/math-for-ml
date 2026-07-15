@@ -90,7 +90,15 @@ SESSIONS = [
               ("s3","3 · The rules"),("s4","4 · Derivative → gradient"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 09–18 get appended here as each _content.html is authored.
+    dict(num="09", slug="09_partial_derivatives", title="Partial derivatives & the Jacobian",
+         lede="A loss has many inputs. Vary one and freeze the rest — that's a partial. "
+              "Stack them into the gradient, and into the Jacobian for vector outputs.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Derivatives, Dot product"],
+         toc=[("s1","1 · Partial derivatives"),("s2","2 · The gradient"),
+              ("s3","3 · Directional derivative"),("s4","4 · The Jacobian"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 10–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range
