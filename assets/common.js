@@ -53,7 +53,7 @@
     const TITLE = {light:"Light — click for Dark", dark:"Dark — click for Glass", glass:"Glass — click for Light"};
     const apply = th => { if(th==="light") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", th);
                           t.textContent = ICON[th]; t.title = TITLE[th]; };
-    let cur = localStorage.getItem("mfml-theme"); if(!ORDER.includes(cur)) cur = "light";
+    let cur = localStorage.getItem("mfml-theme"); if(!ORDER.includes(cur)) cur = "glass";
     apply(cur);
     t.addEventListener("click", () => {
       cur = ORDER[(ORDER.indexOf(cur) + 1) % ORDER.length];
@@ -222,8 +222,8 @@
       }
       /* bubble page transition */
       #mfml-bubble{position:fixed; z-index:200; border-radius:50%; pointer-events:none; transform:scale(0);
-        background:radial-gradient(circle at 40% 35%, rgba(150,120,255,.96), rgba(90,79,207,.99));
-        box-shadow:0 0 80px rgba(90,79,207,.5); will-change:transform;}
+        background:radial-gradient(circle at 38% 32%, rgba(167,139,250,.97), rgba(122,92,240,.98) 52%, rgba(240,128,180,.98));
+        box-shadow:0 0 80px rgba(122,92,240,.5); will-change:transform;}
       html[data-theme="glass"] #mfml-bubble{ -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
     `;
     document.head.appendChild(st);

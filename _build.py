@@ -65,7 +65,7 @@ PAGE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>try{{var _t=localStorage.getItem('mfml-theme');if(_t&&_t!=='light')document.documentElement.setAttribute('data-theme',_t);}}catch(e){{}}</script>
+<script>try{{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}}catch(e){{}}</script>
 <title>{title} · Math for ML</title>
 <meta name="description" content="{lede}">
 <meta property="og:type" content="article">

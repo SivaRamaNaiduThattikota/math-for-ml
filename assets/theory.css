@@ -428,3 +428,9 @@
   details.deeper[open]>summary::before{transform:rotate(90deg);}
   details.deeper .deep-body{padding:4px 18px 16px; border-top:1px solid var(--rule); font-size:.95rem; line-height:1.65; background:var(--card);}
   details.deeper .deep-body .mathband{background:transparent; border:0; box-shadow:none; padding:4px 0;}
+
+  /* ═══════════ brand gradient accents (hero flourishes only — UI stays solid) ═══════════ */
+  :root{ --grad:linear-gradient(110deg,#7A5CF0,#A78BFA,#F080B4); }
+  header.hero h1{ background:var(--grad); -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent; }
+  #progress{ background:var(--grad) !important; }
