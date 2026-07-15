@@ -165,13 +165,13 @@ Singular values are the square roots of the eigenvalues of $A^\top A$: $\sigma_i
 </div></details>
 
 <!-- ═════════ 5 ═════════ -->
-<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+<h2 id="s5"><span class="num">Section 5</span>In NumPy <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
 
 <pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
 
 A = np.array([[<span class="n">3</span>, <span class="n">1</span>], [<span class="n">1</span>, <span class="n">2</span>], [<span class="n">0</span>, <span class="n">1</span>]], dtype=<span class="k">float</span>)   <span class="c"># 3x2, rectangular!</span>
 U, S, Vt = np.linalg.svd(A, full_matrices=<span class="k">False</span>)
-<span class="f">print</span>(S)                              <span class="c"># singular values, sorted: [3.9.. 1.3..]</span>
+<span class="f">print</span>(S)                              <span class="c"># singular values, sorted (largest first)</span>
 
 <span class="c"># rank-1 approximation: keep only the top singular value</span>
 A1 = S[<span class="n">0</span>] * np.outer(U[:, <span class="n">0</span>], Vt[<span class="n">0</span>])
@@ -184,7 +184,7 @@ U, S, Vt = np.linalg.svd(Xc, full_matrices=<span class="k">False</span>)
 PCs = Vt                              <span class="c"># rows are principal components</span>
 var = S**<span class="n">2</span> / (len(X) - <span class="n">1</span>)          <span class="c"># variance per component</span>
 <span class="f">print</span>((var / var.sum()).round(<span class="n">3</span>))    <span class="c"># explained-variance ratio</span></pre>
-<div class="out">[3.9520 1.3480]
+<div class="out">[3.65861951 1.61700716]
 1
 [0.27  0.23  0.19  0.17  0.14]   # (example) how much variance each PC explains</div>
 

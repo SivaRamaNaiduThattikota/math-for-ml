@@ -165,7 +165,7 @@ Every standard loss is a negative log-likelihood: <b>Gaussian → MSE</b>, <b>Be
 </div></details>
 
 <!-- ═════════ 6 ═════════ -->
-<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML</h2>
+<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
 
 <pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
 
@@ -183,7 +183,7 @@ bce = -np.mean(y*np.log(q) + (<span class="n">1</span>-y)*np.log(<span class="n"
 <span class="c"># confident-and-wrong is punished hard</span>
 <span class="f">print</span>(-np.log(<span class="n">0.01</span>))                             <span class="c"># 4.6  (predicted 1% for the true class)</span></pre>
 <div class="out">0.7
-0.2027
+0.2656
 4.605170185988092</div>
 
 <ul>

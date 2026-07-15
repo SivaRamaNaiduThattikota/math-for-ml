@@ -98,7 +98,7 @@
 </div></details>
 
 <!-- ═════════ 5 ═════════ -->
-<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+<h2 id="s5"><span class="num">Section 5</span>In NumPy <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
 
 <pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
 
@@ -109,8 +109,8 @@
 p = np.array([<span class="n">0.7</span>, <span class="n">0.2</span>, <span class="n">0.1</span>])          <span class="c"># truth</span>
 q = np.array([<span class="n">0.5</span>, <span class="n">0.3</span>, <span class="n">0.2</span>])          <span class="c"># model</span>
 <span class="f">print</span>(<span class="f">round</span>(<span class="f">entropy</span>(p),<span class="n">3</span>))              <span class="c"># 1.157 bits</span>
-<span class="f">print</span>(<span class="f">round</span>(<span class="f">cross_entropy</span>(p,q),<span class="n">3</span>))      <span class="c"># 1.276 bits (> entropy)</span>
-<span class="f">print</span>(<span class="f">round</span>(<span class="f">kl</span>(p,q),<span class="n">3</span>))                   <span class="c"># 0.119  = CE - H</span>
+<span class="f">print</span>(<span class="f">round</span>(<span class="f">cross_entropy</span>(p,q),<span class="n">3</span>))      <span class="c"># 1.28 bits (> entropy)</span>
+<span class="f">print</span>(<span class="f">round</span>(<span class="f">kl</span>(p,q),<span class="n">3</span>))                   <span class="c"># 0.123  = CE - H</span>
 
 <span class="c"># cross-entropy = entropy + KL, and KL >= 0</span>
 <span class="f">print</span>(np.isclose(<span class="f">cross_entropy</span>(p,q), <span class="f">entropy</span>(p)+<span class="f">kl</span>(p,q)))   <span class="c"># True</span>
@@ -118,8 +118,8 @@ q = np.array([<span class="n">0.5</span>, <span class="n">0.3</span>, <span clas
 <span class="c"># one-hot label -> cross-entropy is just -log q(true class)</span>
 <span class="f">print</span>(<span class="f">round</span>(-np.log2(<span class="n">0.5</span>), <span class="n">3</span>))         <span class="c"># 1.0 bit if true class had q=0.5</span></pre>
 <div class="out">1.157
-1.276
-0.119
+1.28
+0.123
 True
 1.0</div>
 

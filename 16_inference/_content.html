@@ -107,7 +107,7 @@ It's the error bar you wish every dashboard KPI had. "Conversion = 3.8%" is a po
 </div></details>
 
 <!-- ═════════ 6 ═════════ -->
-<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML</h2>
+<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
 
 <pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
 <span class="k">from</span> math <span class="k">import</span> erf, sqrt
@@ -127,7 +127,7 @@ pval = <span class="n">2</span>*(<span class="n">1</span> - Phi(<span class="f">
 se_d = sqrt(pA*(<span class="n">1</span>-pA)/nA + pB*(<span class="n">1</span>-pB)/nB)
 lo, hi = (pB-pA) - <span class="n">1.96</span>*se_d, (pB-pA) + <span class="n">1.96</span>*se_d
 <span class="f">print</span>(<span class="f">round</span>(lo,<span class="n">3</span>), <span class="f">round</span>(hi,<span class="n">3</span>))                  <span class="c"># CI excludes 0 -> significant</span></pre>
-<div class="out">0.02 2.09 0.0364
+<div class="out">0.02 2.02 0.0432
 0.001 0.039   # 95% CI for the lift excludes 0</div>
 
 <ul>

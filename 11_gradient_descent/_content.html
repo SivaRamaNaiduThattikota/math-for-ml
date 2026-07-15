@@ -123,7 +123,7 @@ The mini-batch is why deep learning scales: you get a good-enough gradient from 
 </div></details>
 
 <!-- ═════════ 6 ═════════ -->
-<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML</h2>
+<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
 
 <pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
 
@@ -141,7 +141,7 @@ w = <span class="n">0.0</span>
     g = <span class="f">float</span>(np.mean(<span class="n">2</span>*X*(w*X - y)))   <span class="c"># dMSE/dw</span>
     w -= <span class="n">0.5</span> * g
 <span class="f">print</span>(<span class="f">round</span>(w, <span class="n">2</span>))                    <span class="c"># -> ~2.5, recovers the slope</span></pre>
-<div class="out">2.9999...   # converged to the minimum
+<div class="out">2.9996   # converged to the minimum
 2.5         # gradient descent learned the true slope</div>
 
 <ul>

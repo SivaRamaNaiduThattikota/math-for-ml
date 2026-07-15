@@ -102,7 +102,7 @@ It's unit conversion. Miles→km is ×1.61; km→m is ×1000; so miles→m is ×
 </div></details>
 
 <!-- ═════════ 5 ═════════ -->
-<h2 id="s5"><span class="num">Section 5</span>In NumPy — backprop by hand</h2>
+<h2 id="s5"><span class="num">Section 5</span>In NumPy — backprop by hand <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
 
 <pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
 sig = <span class="k">lambda</span> z: <span class="n">1</span>/(<span class="n">1</span>+np.exp(-z))
@@ -123,8 +123,8 @@ dL_dw = dL_dz * x            <span class="c"># × local ∂z/∂w = x</span>
 <span class="c"># check against a finite-difference gradient</span>
 g = <span class="k">lambda</span> w: (sig((w)*x) - y)**<span class="n">2</span>
 <span class="f">print</span>((g(w+<span class="n">1e-6</span>) - g(w-<span class="n">1e-6</span>)) / (<span class="n">2e-6</span>))   <span class="c"># ≈ dL_dw ✓</span></pre>
-<div class="out">0.3949...  -0.1131...
--0.1131...   # finite-difference matches the hand-derived gradient</div>
+<div class="out">0.1029  -0.2097
+-0.2097   # finite-difference matches the hand-derived gradient</div>
 
 <div class="callout c-warn"><span class="tag">Frameworks do this automatically — but know the shapes</span>
 <code>loss.backward()</code> in PyTorch runs exactly this backward sweep over the whole graph, filling in <code>.grad</code> for every parameter. It uses <em>Jacobians</em> (Session 9) at each node and multiplies them (reverse order, so $(AB)^\top=B^\top A^\top$ from Session 4 shows up). Understanding the by-hand version is what lets you debug when a gradient is <code>None</code> or a shape is wrong.</div>
