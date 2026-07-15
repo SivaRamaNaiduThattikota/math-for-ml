@@ -1,0 +1,261 @@
+<p class="dropcap">A neural network is a function stuffed inside a function stuffed inside a function — layer after layer, each feeding the next. To train it you need the derivative of the final loss with respect to every weight buried deep inside that nesting. The tool that gets it is the <strong>chain rule</strong>: the derivative of a composition is the <em>product</em> of the derivatives. Run that rule backward through the layers and you have <strong>backpropagation</strong> — the single algorithm that trains essentially every deep model on earth.</p>
+
+<p>This is the payoff of the whole calculus pillar. Sessions 8–9 built the derivative and the gradient; this session composes them into the training algorithm itself.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Apply the <strong>chain rule</strong>: differentiate $f(g(x))$ as $f'(g(x))\cdot g'(x)$.</li>
+    <li>Read a <strong>computational graph</strong> and run its <strong>forward pass</strong>.</li>
+    <li>Run <strong>backprop</strong>: each node passes back (local gradient × upstream gradient).</li>
+    <li>Explain why <strong>reverse mode</strong> is efficient for one loss and many parameters.</li>
+    <li>Recognize <strong>vanishing / exploding gradients</strong> as a product of many derivatives.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§5.2.2 the Chain Rule, §5.6 Backpropagation &amp; Automatic Differentiation</span>.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">The chain rule</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Computational graph</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Backprop</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Why reverse mode</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$f(g(x))$</span><span class="def">A composition — $g$ runs first, then $f$.</span>
+    <span class="sym">$\frac{dL}{dw}$</span><span class="def">What backprop computes: loss gradient w.r.t. a weight.</span>
+    <span class="sym">"upstream"</span><span class="def">The gradient arriving at a node from later in the graph.</span>
+    <span class="sym">"local"</span><span class="def">A node's own derivative of output w.r.t. its input.</span>
+    <span class="sym">$\sigma(z)$</span><span class="def">Sigmoid $1/(1+e^{-z})$; here $\sigma'=\sigma(1-\sigma)$.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>The chain rule <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §5.2.2</a></h2>
+
+<p>If a quantity passes through two functions in a row — $g$ then $f$ — its overall rate of change is the <strong>product</strong> of the two rates:</p>
+
+<div class="mathband">$$ \frac{d}{dx}\,f\big(g(x)\big) = f'\big(g(x)\big)\cdot g'(x) $$</div>
+
+<p>Intuition: if $g$ changes 3× as fast as $x$, and $f$ changes 2× as fast as $g$, then $f$ changes $3\times2=6\times$ as fast as $x$. Rates <em>multiply</em> along a chain. For example, $\frac{d}{dx}\sin(x^2) = \cos(x^2)\cdot 2x$ — the derivative of the outer ($\cos$) times the derivative of the inner ($2x$). For many nested functions you just multiply all the links:</p>
+
+<div class="mathband">$$ \frac{dL}{dx} = \frac{dL}{dh}\cdot\frac{dh}{dz}\cdot\frac{dz}{dx} $$</div>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+It's unit conversion. Miles→km is ×1.61; km→m is ×1000; so miles→m is ×1.61×1000. Each "how much does the next thing change per unit of the previous" multiplies down the chain. Backprop is that same multiplication, applied to a network's layers.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The computational graph &amp; forward pass</h2>
+
+<p>Any model is a <strong>computational graph</strong>: inputs and weights flow through a sequence of simple operations to produce the loss. The <strong>forward pass</strong> just evaluates that graph left-to-right, storing each intermediate value. Take a single neuron with weight $w$, input $x$, target $y$:</p>
+
+<div class="mathband">$$ z = w\,x \;\to\; a = \sigma(z) \;\to\; L = (a-y)^2 $$</div>
+
+<p>Drag the weight below to run the forward pass, then hit <strong>Backprop</strong> to watch the gradient flow back through the same graph.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="bplay" width="880" height="360"></canvas>
+    <div class="ctrlrow"><span class="lbl2">weight w:</span>
+      <input type="range" id="wSlider" min="-3" max="3" step="0.1" value="0.5" style="flex:1; accent-color:var(--accent); max-width:360px;">
+      <button class="btn-anim" id="bpBtn" style="margin-top:0">▶ Backprop</button>
+    </div>
+    <div class="readout">
+      <span><span class="k">forward L</span> = <span class="va" id="rL">…</span></span>
+      <span><span class="k">dL/dw</span> = <span class="vs" id="rGrad">…</span></span>
+      <span id="rHint" class="vd">step w against dL/dw to reduce L</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — A single neuron's forward and backward pass</strong> (fixed $x=1.5$, target $y=1$). Below each node is its <b>forward value</b>; above each arrow is the <b>local derivative</b>, and the amber numbers are the <b>gradient accumulating backward</b> ($dL/da \to dL/dz \to dL/dw$), each = upstream × local. Hit <b>Backprop</b> to sweep the gradient right-to-left. Move $w$ so the loss is near zero and watch $dL/dw \to 0$.</figcaption>
+</figure>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Backprop = the chain rule, run backward <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §5.6</a></h2>
+
+<p>Backpropagation is the chain rule applied to the graph from the output back to the inputs. The rule at <em>every</em> node is identical and beautifully local:</p>
+
+<div class="mathband">$$ \underbrace{\frac{\partial L}{\partial(\text{node input})}}_{\text{gradient to pass back}} = \underbrace{\frac{\partial L}{\partial(\text{node output})}}_{\text{upstream gradient}} \times \underbrace{\frac{\partial(\text{node output})}{\partial(\text{node input})}}_{\text{local gradient}} $$</div>
+
+<p>For our neuron, working right-to-left:</p>
+<div class="mathband">$$ \frac{dL}{da}=2(a-y) \;\to\; \frac{dL}{dz}=\frac{dL}{da}\cdot\underbrace{a(1-a)}_{\sigma'(z)} \;\to\; \frac{dL}{dw}=\frac{dL}{dz}\cdot\underbrace{x}_{\partial z/\partial w} $$</div>
+
+<p>Each node only needs its <em>local</em> derivative and the gradient handed to it from downstream — it never needs to know about the rest of the network. That locality is what makes backprop scale to billions of parameters: it's the same three-line pattern, repeated.</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Why <em>reverse</em> mode — and vanishing gradients</h2>
+
+<p>You could apply the chain rule forward (input→output) or backward (output→input). For ML the choice is decisive: we have <strong>one scalar loss</strong> and <strong>millions of parameters</strong>. Reverse mode computes the loss's gradient w.r.t. <em>all</em> parameters in a <em>single</em> backward pass; forward mode would need one pass per parameter. That efficiency is the whole reason backprop (reverse-mode autodiff) won.</p>
+
+<details class="deeper"><summary>Going deeper — forward vs reverse, and why gradients vanish/explode</summary><div class="deep-body">
+  <p><strong>Forward mode</strong> pushes derivatives input→output, cheap when there are few inputs and many outputs. <strong>Reverse mode</strong> pushes output→input, cheap for many inputs and few outputs — exactly the ML shape (many weights, one loss). Cost of reverse mode ≈ one forward pass, for <em>all</em> gradients at once.</p>
+  <p>But because the chain rule <em>multiplies</em> a derivative per layer, a deep network's gradient is a long product. If those local derivatives are mostly &lt; 1, the product shrinks toward zero — <strong>vanishing gradients</strong> (early layers barely learn); if mostly &gt; 1, it blows up — <strong>exploding gradients</strong>. Sigmoid's derivative peaks at just 0.25, so deep sigmoid stacks vanish — which is <em>why</em> ReLU (derivative 1 for positive inputs), careful initialization, normalization, and residual/skip connections were invented. <span class="secs">See <b>MML §5.6</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy — backprop by hand</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+sig = <span class="k">lambda</span> z: <span class="n">1</span>/(<span class="n">1</span>+np.exp(-z))
+
+x, y, w = <span class="n">1.5</span>, <span class="n">1.0</span>, <span class="n">0.5</span>
+
+<span class="c"># forward pass — store intermediates</span>
+z = w*x
+a = sig(z)
+L = (a - y)**<span class="n">2</span>
+
+<span class="c"># backward pass — chain rule, right to left</span>
+dL_da = <span class="n">2</span>*(a - y)          <span class="c"># dL/da</span>
+dL_dz = dL_da * a*(<span class="n">1</span>-a)     <span class="c"># × local σ'(z) = a(1-a)</span>
+dL_dw = dL_dz * x            <span class="c"># × local ∂z/∂w = x</span>
+<span class="f">print</span>(L, dL_dw)
+
+<span class="c"># check against a finite-difference gradient</span>
+g = <span class="k">lambda</span> w: (sig((w)*x) - y)**<span class="n">2</span>
+<span class="f">print</span>((g(w+<span class="n">1e-6</span>) - g(w-<span class="n">1e-6</span>)) / (<span class="n">2e-6</span>))   <span class="c"># ≈ dL_dw ✓</span></pre>
+<div class="out">0.3949...  -0.1131...
+-0.1131...   # finite-difference matches the hand-derived gradient</div>
+
+<div class="callout c-warn"><span class="tag">Frameworks do this automatically — but know the shapes</span>
+<code>loss.backward()</code> in PyTorch runs exactly this backward sweep over the whole graph, filling in <code>.grad</code> for every parameter. It uses <em>Jacobians</em> (Session 9) at each node and multiplies them (reverse order, so $(AB)^\top=B^\top A^\top$ from Session 4 shows up). Understanding the by-hand version is what lets you debug when a gradient is <code>None</code> or a shape is wrong.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Every training step</strong> is forward pass → loss → <code>backward()</code> (backprop) → optimizer step. This session is that middle arrow.</li>
+  <li><strong>Autodiff frameworks</strong> (PyTorch, JAX, TensorFlow) build the computational graph and run reverse-mode backprop for you — the reason modern deep learning is feasible.</li>
+  <li><strong>Activation &amp; architecture choices</strong> are largely about keeping the gradient product healthy: ReLU/GELU, BatchNorm/LayerNorm, residual connections all fight vanishing/exploding gradients.</li>
+  <li><strong>Gradient clipping</strong> caps exploding gradients (common in RNNs/transformers) — a direct patch on the "product blows up" problem.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+The chain rule multiplies rates along a chain; backprop is that rule run backward through the computational graph, so one pass yields every parameter's gradient. It's the algorithm that makes training possible — and its multiplicative nature is why deep nets need ReLU, normalization, and skip connections.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Store the forward values.</strong> Backprop needs the intermediates (e.g. $a$ for $\sigma'=a(1-a)$); frameworks cache them, which is why the graph uses memory.</li>
+  <li><strong>Order matters (Session 4).</strong> Backward multiplies Jacobians in reverse; transposes appear ($(AB)^\top=B^\top A^\top$).</li>
+  <li><strong>Non-differentiable nodes</strong> (ReLU at 0, max, argmax) use subgradients or block the gradient — know where your graph is smooth.</li>
+  <li><strong>Detaching / stop-gradient</strong> cuts an edge in the backward graph on purpose (e.g. targets in RL, teacher networks).</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Chain rule: derivative of a composition = <strong>product</strong> of derivatives.</li>
+  <li>Backprop at each node: <strong>gradient-in = upstream gradient × local gradient</strong>.</li>
+  <li>It runs <strong>backward</strong> through the graph; one pass → all parameter gradients.</li>
+  <li><strong>Reverse mode</strong> is used because there's one loss and many parameters.</li>
+  <li>A long product of derivatives ⇒ <strong>vanishing/exploding</strong> gradients — mitigated by ReLU, norm, residuals, clipping.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Forgetting the local × upstream structure</span>
+Every node's returned gradient is upstream × its own local derivative. Skipping the local factor (or the upstream one) is the classic hand-backprop bug.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Sigmoid/tanh in deep stacks</span>
+Their derivatives are ≤ 0.25 / ≤ 1, so many layers multiply toward zero → vanishing gradients and dead training. Prefer ReLU-family + normalization for depth.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Reusing a graph after backward</span>
+Frameworks free the graph after <code>backward()</code> by default; calling it twice errors unless you <code>retain_graph</code>. And forgetting <code>optimizer.zero_grad()</code> accumulates stale gradients.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">$\frac{d}{dx}\,e^{3x}$ = ?</div>
+  <button class="opt">$e^{3x}$</button>
+  <button class="opt">$3e^{3x}$ — outer derivative $e^{u}$ times inner derivative $3$.</button>
+  <button class="opt">$3x\,e^{3x}$</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">Why does ML use reverse-mode autodiff (backprop) rather than forward mode?</div>
+  <button class="opt">It's more accurate.</button>
+  <button class="opt">Forward mode can't handle nonlinearities.</button>
+  <button class="opt">One scalar loss, many parameters — reverse gets all gradients in a single backward pass.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Differentiate $f(x)=\sin(x^2)$ and $g(x)=e^{3x}$ with the chain rule.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$f'(x)=\cos(x^2)\cdot2x$; $g'(x)=e^{3x}\cdot3=3e^{3x}$.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>For $L=(a-y)^2$ with $a=\sigma(z)$, write $dL/dz$ using the chain rule.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\frac{dL}{dz}=\frac{dL}{da}\cdot\frac{da}{dz}=2(a-y)\cdot a(1-a)$.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Implement the single-neuron forward+backward from Section 5 and match $dL/dw$ against a finite difference.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">sig=<span class="k">lambda</span> z:<span class="n">1</span>/(<span class="n">1</span>+np.exp(-z)); x,y,w=<span class="n">1.5</span>,<span class="n">1.0</span>,<span class="n">0.5</span>
+z=w*x; a=sig(z)
+dL_dw=<span class="n">2</span>*(a-y)*a*(<span class="n">1</span>-a)*x
+g=<span class="k">lambda</span> w:(sig(w*x)-y)**<span class="n">2</span>
+np.isclose(dL_dw,(g(w+<span class="n">1e-6</span>)-g(w-<span class="n">1e-6</span>))/<span class="n">2e-6</span>)   <span class="c"># True</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Two-layer chain: $z_1=w_1x$, $a=\sigma(z_1)$, $z_2=w_2a$, $L=(z_2-y)^2$. Find $dL/dw_1$ by the chain rule.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\frac{dL}{dw_1}=\underbrace{2(z_2-y)}_{dL/dz_2}\cdot\underbrace{w_2}_{dz_2/da}\cdot\underbrace{a(1-a)}_{da/dz_1}\cdot\underbrace{x}_{dz_1/dw_1}$ — four links multiplied.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Show numerically why deep sigmoid stacks vanish: multiply 10 sigmoid derivatives $a(1-a)$ (with $a\approx0.5$) and compare to multiplying 10 ReLU derivatives (=1).</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="f">print</span>(<span class="n">0.25</span>**<span class="n">10</span>)   <span class="c"># ~9.5e-7  -> vanished</span>
+<span class="f">print</span>(<span class="n">1.0</span>**<span class="n">10</span>)    <span class="c"># 1.0      -> preserved</span></pre>
+    <p>Sigmoid's derivative maxes at 0.25, so ten layers multiply to ~$10^{-6}$ — the early-layer gradient all but disappears. ReLU's derivative of 1 keeps the signal alive. This is the mathematical case for ReLU + residual connections.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · State the chain rule and give an example.</div><div class="a">$\frac{d}{dx}f(g(x))=f'(g(x))g'(x)$ — derivatives multiply along a composition. E.g. $\frac{d}{dx}\sin(x^2)=\cos(x^2)\cdot2x$.</div></div>
+<div class="qa"><div class="q">Q2 · What is backpropagation?</div><div class="a">The chain rule applied backward through a computational graph: each node returns (upstream gradient × its local derivative), so one backward pass yields the loss gradient for every parameter.</div></div>
+<div class="qa"><div class="q">Q3 · Why reverse mode instead of forward mode?</div><div class="a">ML has one scalar loss and many parameters. Reverse mode gets all parameter gradients in a single pass (~one forward pass of cost); forward mode would need a pass per input/parameter.</div></div>
+<div class="qa"><div class="q">Q4 · What causes vanishing/exploding gradients?</div><div class="a">The gradient is a product of one derivative per layer. Derivatives consistently &lt;1 shrink it to zero (vanishing); &gt;1 blow it up (exploding). Fixes: ReLU, normalization, residual connections, gradient clipping.</div></div>
+<div class="qa"><div class="q">Q5 · Why must the forward pass store intermediate activations?</div><div class="a">The backward pass needs them to compute local derivatives (e.g. $\sigma'=a(1-a)$ needs $a$). That's why training uses much more memory than inference.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Chain rule</td><td>Differentiate nested layers</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Computational graph</td><td>How frameworks represent models</td><td class="freq f-h">High</td></tr>
+  <tr><td>Backprop = local × upstream</td><td>The training algorithm itself</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Reverse mode</td><td>All gradients in one pass</td><td class="freq f-h">High</td></tr>
+  <tr><td>Vanishing/exploding</td><td>Motivates ReLU, norm, residuals, clipping</td><td class="freq f-vh">Very high</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../11_gradient_descent/theory.html" style="border:0;color:inherit">11 · Gradient descent →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Backprop hands you the gradient. Gradient descent decides what to <em>do</em> with it: step downhill, choose a learning rate, add momentum — the optimization loop that turns gradients into a trained model.</p>
+</div>

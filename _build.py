@@ -98,7 +98,15 @@ SESSIONS = [
               ("s3","3 · Directional derivative"),("s4","4 · The Jacobian"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 10–18 get appended here as each _content.html is authored.
+    dict(num="10", slug="10_chain_rule_backprop", title="Chain rule & backprop",
+         lede="Networks are functions inside functions. The chain rule differentiates them; "
+              "run it backward through the layers and you get backpropagation.",
+         meta=["~22 min read", "NumPy paired notebook", "Prereq: Derivatives, Jacobian"],
+         toc=[("s1","1 · The chain rule"),("s2","2 · Computational graph"),
+              ("s3","3 · Backprop"),("s4","4 · Why reverse mode"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 11–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range

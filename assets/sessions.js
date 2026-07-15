@@ -16,7 +16,7 @@ window.MFML_SESSIONS = [
   ["la","07","07_svd_pca","SVD, PCA & low-rank","The master decomposition — behind PCA, recommenders, and LoRA.",true],
   ["calc","08","08_derivatives","Derivatives & gradients","How a function changes — the slope that learning follows.",true],
   ["calc","09","09_partial_derivatives","Partial derivatives & the Jacobian","Slopes in many directions at once; the gradient vector.",true],
-  ["calc","10","10_chain_rule_backprop","Chain rule & backprop","How gradients flow backward through a neural network.",false],
+  ["calc","10","10_chain_rule_backprop","Chain rule & backprop","How gradients flow backward through a neural network.",true],
   ["calc","11","11_gradient_descent","Gradient descent","The optimization loop at the heart of training (plus convexity & Lagrange).",false],
   ["prob","12","12_probability_bayes","Probability & Bayes","Reasoning under uncertainty; updating beliefs with evidence.",false],
   ["prob","13","13_distributions","Distributions","Normal, Bernoulli, and the multivariate Gaussian.",false],
