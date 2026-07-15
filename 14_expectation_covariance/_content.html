@@ -1,0 +1,264 @@
+<p class="dropcap">A full distribution (Session 13) is rich but unwieldy. Most of the time you want a few numbers that summarize it: where is it centered, how spread out is it, and — for several variables — how do they move together? Those are <strong>expectation</strong>, <strong>variance</strong>, and <strong>covariance</strong>. They're the quantities behind feature standardization, the covariance matrix that drives PCA, correlation-based feature selection, and the bias–variance trade-off that governs over- and under-fitting.</p>
+
+<p>Three summary numbers, endlessly reused. This session makes each precise and connects the covariance matrix straight back to the PCA/SVD ellipse.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Compute an <strong>expectation</strong> (mean) as a weighted average, and use its linearity.</li>
+    <li>Compute <strong>variance</strong> and standard deviation, and use $\operatorname{Var}(X)=E[X^2]-E[X]^2$.</li>
+    <li>Interpret <strong>covariance</strong> and scale-free <strong>correlation</strong> $\rho\in[-1,1]$.</li>
+    <li>Read a <strong>covariance matrix</strong> and connect it to PCA.</li>
+    <li>Tie these to standardization, whitening, feature selection, and bias–variance.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§6.4 Summary Statistics &amp; Independence</span> (means, (co)variances), with §6.5 for the covariance matrix.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Expectation</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Variance & std</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Covariance & correlation</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">The covariance matrix</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$E[X]$</span><span class="def">Expectation (mean) of $X$ — the probability-weighted average.</span>
+    <span class="sym">$\operatorname{Var}(X)$</span><span class="def">Variance — $E[(X-\mu)^2]$; spread. Std dev $=\sqrt{\operatorname{Var}}$.</span>
+    <span class="sym">$\operatorname{Cov}(X,Y)$</span><span class="def">Covariance — how $X$ and $Y$ move together.</span>
+    <span class="sym">$\rho$</span><span class="def">Correlation — covariance normalized to $[-1,1]$.</span>
+    <span class="sym">$\Sigma$</span><span class="def">Covariance matrix of a random vector.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Expectation — the mean as a weighted average <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.4</a></h2>
+
+<p>The <strong>expectation</strong> $E[X]$ is the long-run average value of $X$, each value weighted by its probability:</p>
+<div class="mathband">$$ E[X]=\sum_x x\,P(x)\quad(\text{discrete}), \qquad E[X]=\int x\,p(x)\,dx\quad(\text{continuous}) $$</div>
+
+<p>A fair die: $E[X]=\tfrac16(1+2+\dots+6)=3.5$. The single most useful property is <strong>linearity</strong> — it holds <em>always</em>, even for dependent variables:</p>
+<div class="mathband">$$ E[aX+b]=aE[X]+b, \qquad E[X+Y]=E[X]+E[Y] $$</div>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+$E[X]$ is <code>AVG(x)</code> — but the <em>weighted</em> version, <code>SUM(value * probability)</code>. Every "expected revenue = Σ outcome × probability" calculation you've built is an expectation. Variance below is just <code>VAR()</code>/<code>STDEV()</code>, and covariance is the two-column generalization.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Variance &amp; standard deviation</h2>
+
+<p><strong>Variance</strong> measures spread — the average squared distance from the mean:</p>
+<div class="mathband">$$ \operatorname{Var}(X)=E\big[(X-\mu)^2\big]=E[X^2]-E[X]^2 $$</div>
+
+<p>The second form ("mean of the square minus square of the mean") is the handy computational one. The <strong>standard deviation</strong> $\sigma=\sqrt{\operatorname{Var}(X)}$ puts spread back in the original units. Two scaling facts you'll reuse constantly:</p>
+<div class="mathband">$$ \operatorname{Var}(aX)=a^2\operatorname{Var}(X), \qquad \operatorname{Var}(X+Y)=\operatorname{Var}(X)+\operatorname{Var}(Y)+2\operatorname{Cov}(X,Y) $$</div>
+
+<p>That $a^2$ is why standardizing divides by $\sigma$ (not $\sigma^2$), and the second identity is the seed of the Central Limit Theorem (Session 15).</p>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Covariance &amp; correlation <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.4</a></h2>
+
+<p><strong>Covariance</strong> asks whether two variables rise and fall together:</p>
+<div class="mathband">$$ \operatorname{Cov}(X,Y)=E\big[(X-\mu_X)(Y-\mu_Y)\big] $$</div>
+<ul>
+  <li><strong>Positive</strong> → they tend to move the same way; <strong>negative</strong> → opposite; <strong>≈ 0</strong> → no <em>linear</em> relationship.</li>
+</ul>
+<p>Covariance's size depends on units, which makes it hard to interpret. <strong>Correlation</strong> fixes that by normalizing to $[-1,1]$:</p>
+<div class="mathband">$$ \rho = \frac{\operatorname{Cov}(X,Y)}{\sigma_X\,\sigma_Y}\ \in[-1,1] $$</div>
+<p>$\rho=\pm1$ means a perfect line; $\rho=0$ means uncorrelated. Drag the correlation below and watch the cloud tilt — and its covariance ellipse rotate with it.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="covplay" width="880" height="400"></canvas>
+    <div class="ctrlrow"><span class="lbl2">correlation ρ:</span>
+      <input type="range" id="sRho" min="-0.95" max="0.95" step="0.05" value="0.7" style="flex:1;accent-color:var(--accent);max-width:340px;"><span id="rRhoVal" class="vd">0.70</span></div>
+    <div class="readout">
+      <span><span class="k">sample corr</span> = <span class="vs" id="rCorr">…</span></span>
+      <span><span class="k">Cov(X,Y)</span> = <span class="va" id="rCov">…</span></span>
+      <span id="rNote" class="vd">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — 400 samples with adjustable correlation.</strong> At $\rho=0$ the cloud is a round blob (uncorrelated); as $\rho\to+1$ it tightens toward a rising line; $\rho\to-1$ a falling line. The amber <b>covariance ellipse</b> (from the sample covariance matrix) rotates and stretches to match — its long axis is the top PCA direction (Session 7).</figcaption>
+</figure>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>The covariance matrix <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.5</a></h2>
+
+<p>For a random <em>vector</em> $\mathbf{x}=[X_1,\dots,X_n]$, all the pairwise covariances collect into the <strong>covariance matrix</strong> $\Sigma$, where $\Sigma_{ij}=\operatorname{Cov}(X_i,X_j)$:</p>
+<div class="mathband">$$ \Sigma = \begin{bmatrix} \operatorname{Var}(X_1) & \operatorname{Cov}(X_1,X_2) & \cdots \\ \operatorname{Cov}(X_2,X_1) & \operatorname{Var}(X_2) & \cdots \\ \vdots & & \ddots \end{bmatrix} $$</div>
+
+<p>The <strong>diagonal holds the variances</strong>, the <strong>off-diagonal the covariances</strong>, and it's always <strong>symmetric and positive-semidefinite</strong>. That last fact is the whole reason PCA works.</p>
+
+<details class="deeper"><summary>Going deeper — variance of a sum, and why independence lets variances add</summary><div class="deep-body">
+  <p>Expanding the square gives $\operatorname{Var}(X+Y)=\operatorname{Var}(X)+\operatorname{Var}(Y)+2\operatorname{Cov}(X,Y)$. If $X$ and $Y$ are <strong>independent</strong> (or just uncorrelated), $\operatorname{Cov}=0$, so <strong>variances simply add</strong>:</p>
+  <div class="mathband">$$ \operatorname{Var}\!\Big(\sum_i X_i\Big)=\sum_i \operatorname{Var}(X_i) \quad(\text{independent}) $$</div>
+  <p>This is why averaging $n$ independent samples cuts variance by $n$ (the mean's variance is $\sigma^2/n$) — the mathematical engine of the Central Limit Theorem (Session 15) and of variance reduction by <strong>ensembling/bagging</strong> in ML. And since $\Sigma$ is symmetric PSD, its eigenvectors (Session 6) are orthogonal and its eigenvalues non-negative — those eigenvectors are exactly the principal components, eigenvalues the variances along them (Session 7). <span class="secs">See <b>MML §6.4–6.5</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+x = np.array([<span class="n">2</span>, <span class="n">4</span>, <span class="n">4</span>, <span class="n">4</span>, <span class="n">5</span>, <span class="n">5</span>, <span class="n">7</span>, <span class="n">9.</span>])
+<span class="f">print</span>(x.mean(), x.var(), x.std())      <span class="c"># mean 5.0, var 4.0, std 2.0</span>
+
+<span class="c"># E[X^2] - E[X]^2 == Var(X)</span>
+<span class="f">print</span>((x**<span class="n">2</span>).mean() - x.mean()**<span class="n">2</span>)     <span class="c"># 4.0</span>
+
+<span class="c"># covariance matrix & correlation of two features</span>
+a = np.random.normal(size=<span class="n">1000</span>)
+b = <span class="n">0.7</span>*a + <span class="n">0.3</span>*np.random.normal(size=<span class="n">1000</span>)
+<span class="f">print</span>(np.cov(a, b).round(<span class="n">2</span>))            <span class="c"># [[~1, ~0.7],[~0.7, ~0.6]]</span>
+<span class="f">print</span>(np.corrcoef(a, b)[<span class="n">0</span>,<span class="n">1</span>].round(<span class="n">2</span>))  <span class="c"># ~0.9  (scale-free)</span></pre>
+<div class="out">5.0 4.0 2.0
+4.0
+[[1.02 0.71]
+ [0.71 0.58]]
+0.92</div>
+
+<div class="callout c-warn"><span class="tag">n vs n−1, and the axis</span>
+NumPy's <code>var</code>/<code>std</code> default to dividing by $n$ (population); use <code>ddof=1</code> for the sample estimate ($n-1$, unbiased) when estimating from data. And <code>np.cov</code> expects variables as <em>rows</em> by default — transpose a samples×features matrix (or pass <code>rowvar=False</code>).</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Standardization</strong> — $z=(x-\mu)/\sigma$ uses exactly the mean and std; it's Session 1's feature scaling, now named.</li>
+  <li><strong>The covariance matrix</strong> drives <strong>PCA</strong> (eigenvectors = components), <strong>whitening</strong> (decorrelate + unit-variance), and the <strong>Mahalanobis distance</strong> for anomaly detection.</li>
+  <li><strong>Correlation</strong> flags redundant features (multicollinearity, Session 5) and guides feature selection — but remember correlation ≠ causation.</li>
+  <li><strong>Bias–variance trade-off</strong> — a model's error decomposes into bias² + variance; ensembling/bagging reduces the variance term by averaging (the "variances add / average" fact above).</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Expectation is the center, variance the spread, covariance/correlation how variables move together. Stack the covariances into $\Sigma$ — symmetric PSD — and its eigenvectors are the PCA axes. These three numbers underlie standardization, PCA, feature selection, and bias–variance.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Uncorrelated ≠ independent:</strong> $\rho=0$ only rules out a <em>linear</em> relationship; a U-shaped dependence has zero correlation.</li>
+  <li><strong>Correlation ≠ causation:</strong> a strong $\rho$ can come from a confounder, not a causal link.</li>
+  <li><strong>Population vs sample:</strong> divide by $n$ for the population variance, $n-1$ (<code>ddof=1</code>) for an unbiased sample estimate.</li>
+  <li><strong>Outliers wreck variance/covariance</strong> — they're squared, so a few extremes dominate. Consider robust stats when needed.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li><strong>Expectation</strong> = probability-weighted average; <strong>linearity</strong> $E[X+Y]=E[X]+E[Y]$ always holds.</li>
+  <li><strong>Variance</strong> $=E[X^2]-E[X]^2$; std $=\sqrt{\text{Var}}$; $\operatorname{Var}(aX)=a^2\operatorname{Var}(X)$.</li>
+  <li><strong>Covariance</strong> = how two move together; <strong>correlation</strong> $\rho=\operatorname{Cov}/(\sigma_X\sigma_Y)\in[-1,1]$.</li>
+  <li>The <strong>covariance matrix</strong> $\Sigma$ is symmetric PSD; diagonal = variances; eigenvectors = PCA directions.</li>
+  <li>Independent ⇒ $\operatorname{Cov}=0$ ⇒ <strong>variances add</strong> (basis of the CLT).</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Correlation ≠ causation, and ρ=0 ≠ independent</span>
+Zero correlation only means no linear link; nonlinear dependence can still be strong. And a high correlation never proves one variable causes the other.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · ddof and rowvar in np.cov</span>
+<code>np.cov</code> uses $n-1$ by default and treats <em>rows</em> as variables. For a samples×features array, pass <code>rowvar=False</code> or you'll compute the covariance of the wrong axis.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Outliers dominate squared stats</span>
+Because deviations are squared, a handful of outliers can blow up variance and covariance. Inspect/clip outliers or use robust alternatives before trusting them.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">Two features have correlation 0. What does that guarantee?</div>
+  <button class="opt">They are independent.</button>
+  <button class="opt">One causes the other.</button>
+  <button class="opt">No <em>linear</em> relationship — but they could still be nonlinearly dependent.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="0">
+  <div class="qz">What are the eigenvectors of a covariance matrix?</div>
+  <button class="opt">The principal component directions (with eigenvalues = variance along each).</button>
+  <button class="opt">The feature means.</button>
+  <button class="opt">Always the coordinate axes.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Compute $E[X]$ and $\operatorname{Var}(X)$ for a fair die by hand, then verify by simulating 100,000 rolls.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$E[X]=3.5$; $\operatorname{Var}=E[X^2]-3.5^2=\tfrac{91}{6}-12.25\approx2.92$.</p>
+    <pre class="code">r=np.random.randint(<span class="n">1</span>,<span class="n">7</span>,<span class="n">100000</span>); r.mean(), r.var()   <span class="c"># ~3.5, ~2.92</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Verify $\operatorname{Var}(X)=E[X^2]-E[X]^2$ on any array.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">x=np.random.rand(<span class="n">1000</span>)
+np.isclose(x.var(), (x**<span class="n">2</span>).mean()-x.mean()**<span class="n">2</span>)   <span class="c"># True</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Make $Y=2X+\text{noise}$; compute $\operatorname{Cov}(X,Y)$ and $\rho$. Then scale $X$ by 1000 — which changes, covariance or correlation?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Correlation is scale-free (unchanged); covariance scales with the units (changes ×1000). That's why we usually report $\rho$.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Show that averaging $n$ independent samples reduces variance: compare the variance of single draws to the variance of means of 25 draws.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">singles=np.random.normal(size=<span class="n">100000</span>)
+means=np.random.normal(size=(<span class="n">100000</span>,<span class="n">25</span>)).mean(<span class="n">1</span>)
+singles.var(), means.var()   <span class="c"># ~1.0 vs ~0.04  (= 1/25)</span></pre>
+    <p>Variance of the mean is $\sigma^2/n=1/25\approx0.04$ — the CLT preview.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Build a 2-D correlated cloud, compute its covariance matrix, and confirm the top eigenvector points along the cloud's main axis.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">a=np.random.normal(size=<span class="n">2000</span>); b=<span class="n">0.9</span>*a+<span class="n">0.4</span>*np.random.normal(size=<span class="n">2000</span>)
+S=np.cov(np.vstack([a,b]))
+w,V=np.linalg.eigh(S)
+V[:,-<span class="n">1</span>]   <span class="c"># top eigenvector ~ along [1, ~0.9] (the cloud's tilt)</span></pre>
+    <p>The eigenvector for the largest eigenvalue aligns with the cloud's greatest-spread direction — PCA's first component.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · Define expectation and variance.</div><div class="a">Expectation is the probability-weighted average $E[X]=\sum x P(x)$. Variance is the average squared deviation $E[(X-\mu)^2]=E[X^2]-E[X]^2$; std dev is its square root.</div></div>
+<div class="qa"><div class="q">Q2 · Covariance vs correlation?</div><div class="a">Covariance measures joint variation but depends on units; correlation normalizes it by the two std devs into $[-1,1]$, making it scale-free and comparable.</div></div>
+<div class="qa"><div class="q">Q3 · Does zero correlation imply independence?</div><div class="a">No — it only rules out a linear relationship. Independent ⇒ uncorrelated, but uncorrelated variables can be nonlinearly dependent.</div></div>
+<div class="qa"><div class="q">Q4 · What's special about the covariance matrix?</div><div class="a">It's symmetric and positive-semidefinite, so it has real non-negative eigenvalues and orthogonal eigenvectors — which are the PCA directions (variance = eigenvalue along each).</div></div>
+<div class="qa"><div class="q">Q5 · Why does averaging reduce variance?</div><div class="a">For independent samples, variances add, so the mean of $n$ has variance $\sigma^2/n$. This underlies the CLT and variance reduction via bagging/ensembling.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Expectation E[X]</td><td>The center; linearity everywhere</td><td class="freq f-h">High</td></tr>
+  <tr><td>Variance / std</td><td>Spread; standardization; bias–variance</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Covariance</td><td>Joint variation; feeds the covariance matrix</td><td class="freq f-h">High</td></tr>
+  <tr><td>Correlation ρ</td><td>Scale-free; feature selection, multicollinearity</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Covariance matrix Σ</td><td>PCA, whitening, Mahalanobis</td><td class="freq f-h">High</td></tr>
+  <tr><td>Variances add (indep.)</td><td>CLT; bagging/ensembling variance reduction</td><td class="freq f-m">Medium</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../15_sampling_clt/theory.html" style="border:0;color:inherit">15 · Sampling & the CLT →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Why do averages of almost anything end up Gaussian? The Central Limit Theorem — the reason the normal distribution is everywhere, and the foundation for confidence intervals and A/B tests.</p>
+</div>

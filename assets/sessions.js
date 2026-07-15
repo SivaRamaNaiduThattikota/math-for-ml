@@ -20,7 +20,7 @@ window.MFML_SESSIONS = [
   ["calc","11","11_gradient_descent","Gradient descent","The optimization loop at the heart of training (plus convexity & Lagrange).",true],
   ["prob","12","12_probability_bayes","Probability & Bayes","Reasoning under uncertainty; updating beliefs with evidence.",true],
   ["prob","13","13_distributions","Distributions","Normal, Bernoulli, and the multivariate Gaussian.",true],
-  ["prob","14","14_expectation_covariance","Expectation, variance & covariance","Summarizing randomness; the covariance matrix.",false],
+  ["prob","14","14_expectation_covariance","Expectation, variance & covariance","Summarizing randomness; the covariance matrix.",true],
   ["prob","15","15_sampling_clt","Sampling & the CLT","Why averages are well-behaved even when data isn't.",false],
   ["prob","16","16_inference","Inference & hypothesis testing","Confidence intervals, p-values, and A/B tests.",false],
   ["prob","17","17_mle_cross_entropy","MLE & cross-entropy","Where loss functions actually come from.",false],

@@ -221,6 +221,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 11 — Gradient descent** (loss-landscape descent-trajectory animator with learning-rate slider + surface presets, MML §7.1/7.2/7.3 + Lagrange-multiplier deep-dive). **Calculus pillar complete (08–11).**
 - ✅ **Session 12 — Probability & Bayes** (1,000-person base-rate icon-array with prevalence/sensitivity/specificity sliders, MML §6.1–6.4 + Bayes-derivation deep-dive). **Probability pillar begins.**
 - ✅ **Session 13 — Distributions** (Gaussian PDF explorer with μ/σ sliders + 68-95-99.7 shaded bands, MML §6.2/6.5 + covariance-ellipse-is-PCA deep-dive).
+- ✅ **Session 14 — Expectation, variance & covariance** (correlation scatter with live covariance ellipse, MML §6.4/6.5 + variance-of-a-sum & variances-add deep-dive).
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 - ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).

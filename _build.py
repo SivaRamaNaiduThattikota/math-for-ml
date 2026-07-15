@@ -130,7 +130,15 @@ SESSIONS = [
               ("s3","3 · The Gaussian"),("s4","4 · Multivariate Gaussian"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 14–18 get appended here as each _content.html is authored.
+    dict(num="14", slug="14_expectation_covariance", title="Expectation, variance & covariance",
+         lede="A distribution's summary numbers: where it centers, how it spreads, and how "
+              "variables move together — plus the covariance matrix behind PCA.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Distributions"],
+         toc=[("s1","1 · Expectation"),("s2","2 · Variance & std"),
+              ("s3","3 · Covariance & correlation"),("s4","4 · The covariance matrix"),
+              ("s5","5 · NumPy"),("s6","6 · Inside ML"),("ref","Rules & traps"),
+              ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
+    # Sessions 15–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range
