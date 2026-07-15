@@ -214,6 +214,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 04 — Matrix multiplication** (compose-two-transformations visualizer with order swap + play, MML §2.2/2.7 + row×col-is-composition & associativity deep-dives).
 - ✅ **Session 05 — Span, basis, rank & independence** (drag-two-vectors span/rank visualizer with lattice collapse, MML §2.4/2.5/2.6 + independence-def & row=col-rank deep-dives).
 - ✅ **Session 06 — Eigenvalues & eigenvectors** (drag-v-watch-Av eigenline finder with matrix presets incl. rotation, MML §4.2/4.4 + char-poly & diagonalization deep-dives).
+- ✅ **Session 07 — SVD, PCA & low-rank** (drag-the-columns circle→ellipse SVD visualizer with singular axes, MML §4.5 + Ch 10 + PCA-via-SVD deep-dive). **Linear Algebra pillar complete (01–07).**
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 - ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).

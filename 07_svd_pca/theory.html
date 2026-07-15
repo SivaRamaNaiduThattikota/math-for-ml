@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>SVD, PCA & low-rank · Math for ML</title>
+<meta name="description" content="Every matrix is a rotation, a stretch, and a rotation. That one fact powers PCA, compression, recommenders, and LoRA.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SVD, PCA & low-rank · Math for ML">
+<meta property="og:description" content="Every matrix is a rotation, a stretch, and a rotation. That one fact powers PCA, compression, recommenders, and LoRA.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="07_svd_pca">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · Rotate–stretch–rotate</a>
+  <a href="#s2">2 · Singular values</a>
+  <a href="#s3">3 · Low-rank approximation</a>
+  <a href="#s4">4 · PCA</a>
+  <a href="#s5">5 · NumPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Linear Algebra · 07</div>
+    <h1>SVD, PCA & low-rank</h1>
+    <p class="lede">Every matrix is a rotation, a stretch, and a rotation. That one fact powers PCA, compression, recommenders, and LoRA.</p>
+    <div class="meta"><span>~22 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: Eigenvalues, Rank</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">Eigenvectors (Session 6) were beautiful but fussy: they need a <em>square</em> matrix, and even then may be complex or missing. Real data matrices are rectangular — 10,000 rows by 300 columns. The <strong>singular value decomposition</strong> fixes everything: <em>every</em> matrix, any shape, factors into a rotation, a stretch, and another rotation. From that one fact flow PCA, image compression, recommender systems, and the low-rank adapters (LoRA) used to fine-tune today's large language models.</p>
+
+<p>This is the capstone of the linear-algebra pillar. If you understand "any matrix = rotate → stretch → rotate," you understand the single most useful factorization in machine learning.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Read the SVD $A = U\Sigma V^\top$ geometrically: <strong>rotate, stretch, rotate</strong> — for any matrix.</li>
+    <li>Interpret <strong>singular values</strong> as sorted stretch factors, and rank as the count of non-zero ones.</li>
+    <li>Build the <strong>best rank-$k$ approximation</strong> by keeping the top singular values (compression).</li>
+    <li>Explain <strong>PCA</strong> as the eigenvectors of the covariance matrix / the SVD of centered data.</li>
+    <li>Name where SVD shows up: PCA, recommenders, image compression, and LoRA.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§4.5 Singular Value Decomposition</span>, with <span class="secs">Ch 10 (Dimensionality Reduction with PCA)</span> for the PCA half. We build the geometry; those chapters give the full derivations.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">SVD: rotate–stretch–rotate</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Singular values</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Low-rank approximation</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">PCA</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$A = U\Sigma V^\top$</span><span class="def">The SVD: two rotations (U, V) around a diagonal stretch (Σ).</span>
+    <span class="sym">$\sigma_i$</span><span class="def">Singular values — the diagonal of Σ, sorted $\sigma_1\ge\sigma_2\ge\dots\ge 0$.</span>
+    <span class="sym">$U, V$</span><span class="def">Orthogonal matrices — left / right singular vectors (rotations).</span>
+    <span class="sym">$A_k$</span><span class="def">The best rank-$k$ approximation (top-$k$ singular pieces).</span>
+    <span class="sym">$C = \tfrac{1}{n-1}X^\top X$</span><span class="def">Covariance matrix (centered X) — its eigenvectors are the PCs.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>SVD: every matrix is rotate → stretch → rotate <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §4.5</a></h2>
+
+<p>The singular value decomposition factors <em>any</em> $m\times n$ matrix into three simple pieces:</p>
+
+<div class="mathband">$$ A = U\,\Sigma\,V^\top $$</div>
+
+<p>Read it right-to-left as a pipeline (Session 4): $V^\top$ <strong>rotates</strong> the input into a nice frame, $\Sigma$ <strong>stretches</strong> each axis by a singular value, and $U$ <strong>rotates</strong> the result into place. $U$ and $V$ are orthogonal (pure rotations/reflections — they preserve lengths and angles), and $\Sigma$ is diagonal with non-negative entries. The cleanest way to <em>see</em> it: a matrix always maps the unit circle to an <strong>ellipse</strong>, and the ellipse's axes are the singular values along the directions of $U$.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="vplay" width="880" height="470"></canvas>
+    <div class="readout">
+      <span><span class="k">σ₁</span> = <span class="vs" id="rS1">…</span></span>
+      <span><span class="k">σ₂</span> = <span class="vs" id="rS2">…</span></span>
+      <span><span class="k">rank</span> = <span class="vd" id="rRank">…</span></span>
+      <span><span class="k">condition σ₁/σ₂</span> = <span class="vd" id="rCond">…</span></span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Drag the columns of $A$; the unit circle (faint) maps to the amber ellipse.</strong> The ellipse's two semi-axes are the <b>singular values</b> $\sigma_1\ge\sigma_2$ (how much each principal direction is stretched); the indigo/teal arrows on the circle are the <b>right singular vectors</b> that map onto them. Flatten the ellipse toward a line and $\sigma_2\to 0$ — the matrix is becoming rank-1 (Session 5), and the condition number blows up.</figcaption>
+</figure>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Picture a wide table of correlated metrics. SVD finds the few underlying "factors" that explain most of the variation — like discovering that twenty KPIs are really driven by three trends. It's the mathematical engine behind "reduce these columns to the handful that matter," which is exactly what PCA does below.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Singular values — sorted stretch factors</h2>
+
+<p>The singular values $\sigma_1 \ge \sigma_2 \ge \dots \ge 0$ are the ellipse's axis lengths, always non-negative and sorted largest-first. They carry a lot of information at a glance:</p>
+<ul>
+  <li><strong>The number of non-zero $\sigma_i$ is the rank</strong> (Session 5). A zero singular value = a direction squashed flat.</li>
+  <li><strong>$\sigma_1$ is the maximum stretch</strong> the matrix applies to any unit vector; $\sigma_n$ the minimum.</li>
+  <li><strong>The condition number $\sigma_1/\sigma_n$</strong> measures how "close to singular" a matrix is — huge values mean numerically unstable inverses (the practical near-collinearity of Session 5).</li>
+</ul>
+
+<div class="callout c-good"><span class="tag">Link back to eigenvalues (Session 6)</span>
+Singular values are the square roots of the eigenvalues of $A^\top A$: $\sigma_i = \sqrt{\lambda_i(A^\top A)}$. And for a <em>symmetric positive-semidefinite</em> matrix, the SVD and the eigendecomposition coincide. SVD is the honest generalization of eigenvectors to matrices that aren't square or symmetric.</div>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Low-rank approximation — compression that keeps what matters</h2>
+
+<p>The SVD lets you rebuild $A$ as a sum of <strong>rank-1 pieces</strong>, each weighted by a singular value:</p>
+<div class="mathband">$$ A = \sigma_1 \mathbf{u}_1\mathbf{v}_1^\top + \sigma_2\mathbf{u}_2\mathbf{v}_2^\top + \dots $$</div>
+
+<p>Because the pieces are sorted by importance, <strong>keeping only the top $k$</strong> gives $A_k$ — and a famous result (the <strong>Eckart–Young theorem</strong>) says this is the <em>best possible</em> rank-$k$ approximation of $A$. Truncating the tiny singular values throws away noise/detail while preserving structure.</p>
+
+<div class="mathband">$$ A \approx A_k = \sum_{i=1}^{k}\sigma_i\mathbf{u}_i\mathbf{v}_i^\top $$</div>
+
+<p>The compression is real: a $1000\times1000$ image is a million numbers, but a rank-50 approximation stores only $50\times(1000+1000+1) \approx 100{,}000$ — a 10× saving, often visually indistinguishable. This "the important information is low-rank" assumption is everywhere in ML.</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>PCA — the max-variance directions of your data <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML Ch 10</a></h2>
+
+<p><strong>Principal Component Analysis</strong> is the flagship application. Given data with correlated features, PCA finds a new set of orthogonal axes — the <strong>principal components</strong> — ordered so the first captures the most variance, the second the next most, and so on. Project onto the top few and you've reduced dimensionality while keeping most of the signal.</p>
+
+<p>The recipe is pure Sessions 6–7:</p>
+<ol>
+  <li><strong>Center</strong> the data (subtract the mean of each feature).</li>
+  <li>Form the <strong>covariance matrix</strong> $C = \frac{1}{n-1}X^\top X$ — symmetric, so (spectral theorem, Session 6) it has real eigenvalues and orthogonal eigenvectors.</li>
+  <li>The <strong>eigenvectors of $C$ are the principal components</strong>; each <strong>eigenvalue is the variance</strong> captured along that component.</li>
+  <li>Keep the top-$k$ components → project → done.</li>
+</ol>
+
+<details class="deeper"><summary>Going deeper — PCA is just the SVD of the centered data</summary><div class="deep-body">
+  <p>You don't even need to form the covariance matrix. If $X$ is your centered data ($n$ rows, $d$ features) with SVD $X = U\Sigma V^\top$, then:</p>
+  <div class="mathband">$$ X^\top X = V\Sigma^\top U^\top U \Sigma V^\top = V\,\Sigma^2\,V^\top $$</div>
+  <p>That's an eigendecomposition of (a scalar multiple of) the covariance: the <strong>right singular vectors $V$ are the principal components</strong>, and the <strong>squared singular values are proportional to the variances</strong>. So "PCA" and "SVD of centered data" are the same computation — which is exactly how libraries implement it (more stably than eigendecomposing $X^\top X$). <span class="secs">See <b>MML §4.5 &amp; Ch 10</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+A = np.array([[<span class="n">3</span>, <span class="n">1</span>], [<span class="n">1</span>, <span class="n">2</span>], [<span class="n">0</span>, <span class="n">1</span>]], dtype=<span class="k">float</span>)   <span class="c"># 3x2, rectangular!</span>
+U, S, Vt = np.linalg.svd(A, full_matrices=<span class="k">False</span>)
+<span class="f">print</span>(S)                              <span class="c"># singular values, sorted: [3.9.. 1.3..]</span>
+
+<span class="c"># rank-1 approximation: keep only the top singular value</span>
+A1 = S[<span class="n">0</span>] * np.outer(U[:, <span class="n">0</span>], Vt[<span class="n">0</span>])
+<span class="f">print</span>(np.linalg.matrix_rank(A1))     <span class="c"># 1</span>
+
+<span class="c"># PCA via SVD of centered data</span>
+X = np.random.rand(<span class="n">100</span>, <span class="n">5</span>)
+Xc = X - X.mean(axis=<span class="n">0</span>)              <span class="c"># center</span>
+U, S, Vt = np.linalg.svd(Xc, full_matrices=<span class="k">False</span>)
+PCs = Vt                              <span class="c"># rows are principal components</span>
+var = S**<span class="n">2</span> / (len(X) - <span class="n">1</span>)          <span class="c"># variance per component</span>
+<span class="f">print</span>((var / var.sum()).round(<span class="n">3</span>))    <span class="c"># explained-variance ratio</span></pre>
+<div class="out">[3.9520 1.3480]
+1
+[0.27  0.23  0.19  0.17  0.14]   # (example) how much variance each PC explains</div>
+
+<div class="callout c-warn"><span class="tag">Center first; use full_matrices=False</span>
+PCA on <em>un-centered</em> data finds directions dominated by the mean, not the variance — always subtract the mean first. And <code>full_matrices=False</code> gives the compact, economical SVD (skips the parts you never use), which is what you want for tall data matrices.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>PCA</strong> — dimensionality reduction for visualization (project to 2-D), denoising, decorrelation, and speeding up downstream models.</li>
+  <li><strong>Recommender systems</strong> — matrix factorization of the user×item ratings matrix is a low-rank SVD: the singular vectors are latent "taste" factors.</li>
+  <li><strong>Image &amp; data compression</strong> — truncated SVD (Eckart–Young) stores the top components only.</li>
+  <li><strong>LoRA (Low-Rank Adaptation)</strong> — fine-tuning an LLM by learning a <em>low-rank</em> update $\Delta W = BA$ instead of all the weights. It works because the useful adaptation is low-rank — the exact premise of this session.</li>
+  <li><strong>Latent Semantic Analysis</strong> — SVD of a term×document matrix uncovers topics; the pseudo-inverse (least squares) is built from the SVD too.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+SVD says every matrix is rotate → stretch → rotate, and the stretches (singular values) rank the directions by importance. Keep the top few → PCA, compression, recommenders, LoRA. This is where linear algebra pays for the whole course.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>SVD always exists</strong> — for any real matrix, any shape. Eigendecomposition doesn't.</li>
+  <li><strong>Singular values are unique</strong> (and $\ge 0$); the singular <em>vectors</em> can flip sign or rotate within a repeated-$\sigma$ subspace.</li>
+  <li><strong>Center before PCA</strong>, and usually <strong>standardize</strong> (scale features) too — otherwise a large-unit feature hijacks the components (Session 1's feature scaling returns).</li>
+  <li><strong>Explained-variance ratio</strong> ($\sigma_i^2/\sum\sigma_j^2$) tells you how many components to keep — look for the "elbow."</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>$A=U\Sigma V^\top$ for <strong>any</strong> matrix: rotate → stretch → rotate.</li>
+  <li><strong>Singular values</strong> = sorted stretch factors; count of non-zero ones = rank.</li>
+  <li>Top-$k$ singular pieces = <strong>best rank-$k$ approximation</strong> (Eckart–Young).</li>
+  <li><strong>PCA</strong> = eigenvectors of the covariance = right singular vectors of centered data; eigenvalues/σ² = variance.</li>
+  <li>Center (and usually scale) your data <em>before</em> PCA.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Forgetting to center (or scale)</span>
+Un-centered PCA points at the mean; un-scaled PCA points at whatever feature has the biggest units. Standardize first, or your "principal components" are artifacts.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Reading singular-vector signs as meaningful</span>
+Signs (and directions within tied singular values) are arbitrary and vary by library/run. Don't interpret a PC's sign; interpret the direction/axis.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Eigendecomposing XᵀX directly</span>
+Forming $X^\top X$ squares the condition number and loses precision. Prefer SVD of $X$ itself — it's what <code>PCA</code> implementations use.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">A matrix maps the unit circle to an ellipse with semi-axes 5 and 0.01. What does that tell you?</div>
+  <button class="opt">The matrix is a pure rotation.</button>
+  <button class="opt">The matrix has rank 1 exactly.</button>
+  <button class="opt">It's nearly rank-1 (σ₂ ≈ 0): almost all the action is along one direction — huge condition number, near-singular.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="0">
+  <div class="qz">What are the principal components in PCA?</div>
+  <button class="opt">The eigenvectors of the covariance matrix (= right singular vectors of centered data), ordered by variance.</button>
+  <button class="opt">The rows of the raw data matrix.</button>
+  <button class="opt">The feature means.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Compute the SVD of $\begin{bmatrix}3&0\\0&2\end{bmatrix}$ by inspection. What are its singular values and singular vectors?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Already diagonal with positive entries: $\sigma_1=3,\sigma_2=2$, singular vectors are the axes. A positive diagonal matrix is its own SVD (U=V=I).</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Verify $\sigma_i=\sqrt{\lambda_i(A^\top A)}$ for a random 3×2 matrix.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">A = np.random.rand(<span class="n">3</span>,<span class="n">2</span>)
+S = np.linalg.svd(A, compute_uv=<span class="k">False</span>)
+lam = np.sort(np.linalg.eigvals(A.T &#64; A).real)[::<span class="n">-1</span>]
+np.allclose(S, np.sqrt(lam))    <span class="c"># True</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Reconstruct a matrix from its full SVD, then from only its top singular value; compare.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">A = np.random.rand(<span class="n">4</span>,<span class="n">4</span>)
+U,S,Vt = np.linalg.svd(A)
+full = U &#64; np.diag(S) &#64; Vt                 <span class="c"># == A</span>
+A1   = S[<span class="n">0</span>] * np.outer(U[:,<span class="n">0</span>], Vt[<span class="n">0</span>])       <span class="c"># rank-1 approx</span>
+np.linalg.norm(A-full), np.linalg.norm(A-A1)  <span class="c"># ~0 , larger</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Generate 2-D data stretched along the line $y=x$, run PCA via SVD, and confirm the first PC points along $[1,1]$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">t = np.random.randn(<span class="n">500</span>)
+X = np.column_stack([t, t + <span class="n">0.1</span>*np.random.randn(<span class="n">500</span>)])
+Xc = X - X.mean(<span class="n">0</span>)
+_,S,Vt = np.linalg.svd(Xc, full_matrices=<span class="k">False</span>)
+Vt[<span class="n">0</span>]    <span class="c"># ~[0.707, 0.707] (or its negative) -> along y=x</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Explained variance: on 5-D random data, compute the ratio $\sigma_i^2/\sum\sigma_j^2$ and the cumulative sum. How many components to keep for 90%?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">X = np.random.rand(<span class="n">200</span>,<span class="n">5</span>); Xc = X - X.mean(<span class="n">0</span>)
+S = np.linalg.svd(Xc, compute_uv=<span class="k">False</span>)
+ratio = S**<span class="n">2</span>/np.sum(S**<span class="n">2</span>)
+np.cumsum(ratio)     <span class="c"># find the first index >= 0.90</span></pre>
+    <p>Count the components until the cumulative ratio crosses 0.90 — that's your $k$. The "elbow" in this curve is the standard way to choose it.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What is the SVD, geometrically?</div><div class="a">$A=U\Sigma V^\top$: any linear map is a rotation ($V^\top$), an axis-wise stretch by the singular values ($\Sigma$), then another rotation ($U$). It maps the unit sphere to an ellipsoid whose axes are the singular values.</div></div>
+<div class="qa"><div class="q">Q2 · How does SVD relate to eigendecomposition?</div><div class="a">Singular values are √eigenvalues of $A^\top A$; the right singular vectors are its eigenvectors. For symmetric PSD matrices, SVD = eigendecomposition. SVD generalizes it to any shape.</div></div>
+<div class="qa"><div class="q">Q3 · How is PCA computed, and what do the components mean?</div><div class="a">Center the data, take the SVD (or eigendecompose the covariance); the right singular vectors / covariance eigenvectors are the principal components, and σ²/eigenvalues give the variance each captures. Keep the top-k.</div></div>
+<div class="qa"><div class="q">Q4 · What does low-rank approximation give you, and why is it optimal?</div><div class="a">Keeping the top-k singular components is the best rank-k approximation in Frobenius/spectral norm (Eckart–Young) — maximal information for the storage, used for compression and denoising.</div></div>
+<div class="qa"><div class="q">Q5 · Where does SVD show up in modern ML?</div><div class="a">PCA, recommender matrix factorization, image compression, LSA, the pseudo-inverse for least squares, and LoRA (low-rank weight updates for LLM fine-tuning).</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>A = UΣVᵀ (any matrix)</td><td>The universal factorization; rotate–stretch–rotate</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Singular values</td><td>Rank, max stretch, condition number</td><td class="freq f-h">High</td></tr>
+  <tr><td>Low-rank approximation</td><td>Compression, denoising (Eckart–Young)</td><td class="freq f-h">High</td></tr>
+  <tr><td>PCA = SVD of centered data</td><td>Dimensionality reduction; the flagship use</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>σᵢ = √λᵢ(AᵀA)</td><td>Ties SVD to eigenvalues (Session 6)</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Low-rank in practice</td><td>Recommenders, LoRA, LSA</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next pillar</span>
+  <h3><a href="../08_derivatives/theory.html" style="border:0;color:inherit">08 · Derivatives & gradients →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Linear algebra done — we can move and decompose data. Now <em>calculus</em>: how does a function change as we nudge its input? The derivative is the slope that every learning algorithm follows downhill.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 7 — SVD geometry: the unit circle maps to an ellipse whose axes are the singular values
+(function(){
+  const cv=document.getElementById('vplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, O={x:W*0.5,y:H*0.52}, S=52;
+  let i={x:2,y:0.4}, j={x:0.6,y:1.6}, drag=null;   // columns of A (images of basis)
+  const P=p=>({x:O.x+p.x*S, y:O.y-p.y*S});
+  const toData=q=>({x:(q.x-O.x)/S, y:(O.y-q.y)/S});
+  const applyM=p=>({x:i.x*p.x + j.x*p.y, y:i.y*p.x + j.y*p.y});
+
+  function svd2(){
+    const a=i.x,b=j.x,c=i.y,d=j.y;                 // A = [[a,b],[c,d]]
+    const p=a*a+c*c, q=a*b+c*d, r=b*b+d*d;         // A^T A (symmetric)
+    const tr=p+r, det=p*r-q*q, disc=Math.sqrt(Math.max(0,tr*tr-4*det));
+    const l=[(tr+disc)/2,(tr-disc)/2];
+    const V=l.map(lam=>{
+      let e = Math.abs(q)>1e-9 ? [q, lam-p] : (Math.abs(lam-p)<1e-9?[1,0]:[0,1]);
+      const n=Math.hypot(e[0],e[1])||1; return {x:e[0]/n, y:e[1]/n};
+    });
+    const sig=l.map(x=>Math.sqrt(Math.max(0,x)));
+    const U=V.map((v,k)=>{ const av=applyM(v), n=sig[k]>1e-6?sig[k]:1; return {x:av.x/n,y:av.y/n}; });
+    return {sig, V, U};
+  }
+  function arrow(f,t,col,w){
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(t.x,t.y);ctx.stroke();
+    const an=Math.atan2(t.y-f.y,t.x-f.x),h=12;
+    ctx.beginPath();ctx.moveTo(t.x,t.y);
+    ctx.lineTo(t.x-h*Math.cos(an-0.42),t.y-h*Math.sin(an-0.42));
+    ctx.lineTo(t.x-h*Math.cos(an+0.42),t.y-h*Math.sin(an+0.42));
+    ctx.closePath();ctx.fill();
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#EDEAE0';ctx.lineWidth=1;
+    for(let x=O.x%S;x<W;x+=S){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=O.y%S;y<H;y+=S){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,O.y);ctx.lineTo(W,O.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O.x,0);ctx.lineTo(O.x,H);ctx.stroke();
+
+    // unit circle (faint)
+    ctx.strokeStyle='#C3BCF0';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    for(let k=0;k<=64;k++){const t=k/64*2*Math.PI,pp=P({x:Math.cos(t),y:Math.sin(t)});k?ctx.lineTo(pp.x,pp.y):ctx.moveTo(pp.x,pp.y);}
+    ctx.stroke();ctx.setLineDash([]);
+    // image ellipse
+    ctx.strokeStyle='#B07514';ctx.lineWidth=2.5;ctx.fillStyle='rgba(176,117,20,0.10)';
+    ctx.beginPath();
+    for(let k=0;k<=64;k++){const t=k/64*2*Math.PI,pp=P(applyM({x:Math.cos(t),y:Math.sin(t)}));k?ctx.lineTo(pp.x,pp.y):ctx.moveTo(pp.x,pp.y);}
+    ctx.closePath();ctx.fill();ctx.stroke();
+
+    const {sig,V,U}=svd2(), o=P({x:0,y:0});
+    // right singular vectors on the unit circle -> matching ellipse axes
+    const cols=['#5A4FCF','#0E8C80'];
+    for(let k=0;k<2;k++){
+      arrow(o, P(V[k]), cols[k], 2);                                  // input direction on circle
+      arrow(o, P({x:sig[k]*U[k].x, y:sig[k]*U[k].y}), cols[k], 3.5);  // stretched ellipse axis
+    }
+    // draggable column handles
+    [[P(i),'#8A8698'],[P(j),'#8A8698']].forEach(([pp,c])=>{
+      ctx.fillStyle='#fff';ctx.strokeStyle=c;ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(pp.x,pp.y,7,0,7);ctx.fill();ctx.stroke();
+    });
+    upd(sig);
+  }
+  function upd(sig){
+    const r=x=>Math.round(x*100)/100, el=id=>document.getElementById(id);
+    el('rS1').textContent=r(sig[0]); el('rS2').textContent=r(sig[1]);
+    const rank=(sig[0]>0.05?1:0)+(sig[1]>0.05?1:0);
+    el('rRank').textContent=rank; el('rRank').style.color = rank===2?'#0E8C80':'#C13A57';
+    el('rCond').textContent = sig[1]>0.05 ? r(sig[0]/sig[1]) : '∞ (near-singular)';
+  }
+  function pos(e){const R=cv.getBoundingClientRect(),sx=cv.width/R.width,sy=cv.height/R.height,s=e.touches?e.touches[0]:e;return{x:(s.clientX-R.left)*sx,y:(s.clientY-R.top)*sy};}
+  function pick(p){const pi=P(i),pj=P(j);if(Math.hypot(p.x-pi.x,p.y-pi.y)<18)return'i';if(Math.hypot(p.x-pj.x,p.y-pj.y)<18)return'j';return null;}
+  function down(e){drag=pick(pos(e));if(drag)e.preventDefault();}
+  function move(e){if(!drag)return;e.preventDefault();const d=toData(pos(e)),sn=x=>Math.round(x*10)/10;if(drag==='i')i={x:sn(d.x),y:sn(d.y)};else j={x:sn(d.x),y:sn(d.y)};draw();}
+  function up(){drag=null;}
+  cv.addEventListener('mousedown',down);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
+
+  draw();
+})();
+</script>
+</body>
+</html>

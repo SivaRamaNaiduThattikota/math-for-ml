@@ -74,7 +74,15 @@ SESSIONS = [
               ("s3","3 · Finding them"),("s4","4 · Special cases"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 07–18 get appended here as each _content.html is authored.
+    dict(num="07", slug="07_svd_pca", title="SVD, PCA & low-rank",
+         lede="Every matrix is a rotation, a stretch, and a rotation. That one fact powers "
+              "PCA, compression, recommenders, and LoRA.",
+         meta=["~22 min read", "NumPy paired notebook", "Prereq: Eigenvalues, Rank"],
+         toc=[("s1","1 · Rotate–stretch–rotate"),("s2","2 · Singular values"),
+              ("s3","3 · Low-rank approximation"),("s4","4 · PCA"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 08–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range
