@@ -1,0 +1,264 @@
+<p class="dropcap">Where do loss functions actually come from? Why <em>squared error</em> for regression and <em>cross-entropy</em> for classification — why not something else? The answer is one principle: <strong>maximum likelihood</strong>. Choose the parameters that make the observed data most probable. Take the (negative) log of that likelihood and — remarkably — out fall MSE and cross-entropy, exactly the losses you've been minimizing all along. Training a model <em>is</em> maximum-likelihood estimation, run by gradient descent.</p>
+
+<p>This session is where probability (Sessions 12–16) and optimization (Sessions 8–11) finally meet: likelihoods become losses, and priors become regularization.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Define the <strong>likelihood</strong> $P(\text{data}\mid\theta)$ and the idea of <strong>MLE</strong>.</li>
+    <li>Use the <strong>log-likelihood</strong>, and see why <strong>negative log-likelihood is a loss</strong>.</li>
+    <li>Derive <strong>MSE</strong> from a Gaussian assumption and <strong>cross-entropy</strong> from a Bernoulli/categorical one.</li>
+    <li>Explain <strong>MAP</strong> and how a prior becomes <strong>regularization</strong> (L2/L1).</li>
+    <li>See that training a model is maximum likelihood via gradient descent.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§8.3 Parameter Estimation (Maximum Likelihood &amp; MAP)</span>, with §9 (Linear Regression) for the Gaussian→MSE case.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Likelihood</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">MLE & log-likelihood</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Gaussian → MSE</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Bernoulli → cross-entropy</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">MAP → regularization</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">NumPy & ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$L(\theta)$</span><span class="def">Likelihood — $P(\text{data}\mid\theta)$ as a function of parameters $\theta$.</span>
+    <span class="sym">$\ell(\theta)$</span><span class="def">Log-likelihood $\log L(\theta)$ — turns products into sums.</span>
+    <span class="sym">NLL</span><span class="def">Negative log-likelihood $-\ell(\theta)$ — the thing we minimize (the loss).</span>
+    <span class="sym">$\hat\theta_{\text{MLE}}$</span><span class="def">The parameter that maximizes the likelihood.</span>
+    <span class="sym">MAP</span><span class="def">Maximum a posteriori — MLE plus a prior (regularization).</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Likelihood — reading probability backwards <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §8.3</a></h2>
+
+<p>Session 12 asked: given parameters, how probable is the data? The <strong>likelihood</strong> flips the roles — the <em>data is fixed</em> (you observed it) and the <em>parameters vary</em>. For i.i.d. observations it's the product of each point's probability under the model:</p>
+
+<div class="mathband">$$ L(\theta) = P(\text{data}\mid\theta) = \prod_{i=1}^{n} p(x_i\mid\theta) $$</div>
+
+<p>The likelihood scores a candidate parameter: "how well does $\theta$ explain what I actually saw?" A coin that came up 7 heads in 10 tosses is better explained by $p=0.7$ than by $p=0.1$ — $L(0.7)>L(0.1)$.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+It's curve-fitting made principled. Instead of eyeballing a trend line, you ask: "which parameter values would have made <em>this exact dataset</em> most likely to occur?" Fitting a model = searching parameter space for the best explanation of the data you have.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>MLE &amp; the log-likelihood</h2>
+
+<p><strong>Maximum Likelihood Estimation</strong> picks the parameter that maximizes $L(\theta)$. Products of many small probabilities underflow and are awkward to differentiate, so we take the <strong>log</strong> — turning the product into a sum, without moving the maximum (log is monotonic):</p>
+
+<div class="mathband">$$ \hat\theta_{\text{MLE}}=\arg\max_\theta \sum_{i=1}^n \log p(x_i\mid\theta) = \arg\min_\theta \underbrace{\Big(-\sum_{i=1}^n \log p(x_i\mid\theta)\Big)}_{\text{negative log-likelihood} = \text{loss}} $$</div>
+
+<p>Maximizing likelihood = minimizing <strong>negative log-likelihood (NLL)</strong> — and "minimize a loss by gradient descent" is exactly Sessions 8–11. Slide the parameter below and watch the likelihood of the observed coin data peak at the MLE.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="mleplay" width="880" height="380"></canvas>
+    <div class="ctrlrow"><span class="lbl2">guess p (P of heads):</span>
+      <input type="range" id="sP" min="0.02" max="0.98" step="0.01" value="0.5" style="flex:1;accent-color:var(--accent);max-width:340px;"><span id="rP" class="vd">0.50</span>
+      <button class="btn-anim" id="mleBtn" style="margin-top:0">🎲 New data</button></div>
+    <div class="readout">
+      <span><span class="k">data</span> = <span class="va" id="rData">…</span></span>
+      <span><span class="k">log-likelihood</span> = <span class="vd" id="rLL">…</span></span>
+      <span><span class="k">MLE p̂</span> = <span class="vs" id="rMLE">…</span></span>
+      <span id="rNote" class="vb">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — The likelihood curve for a coin.</strong> Given the observed flips, the curve is $L(p)=p^{k}(1-p)^{n-k}$ (shown normalized). Slide your guess $p$; the marker climbs the curve and the log-likelihood peaks exactly at the <b>MLE</b> $\hat p = k/n$ (the observed proportion, dashed line). Draw new data and the peak moves to match — MLE always lands on what the data says.</figcaption>
+</figure>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Gaussian likelihood → mean squared error <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §9</a></h2>
+
+<p>Regression assumes each target is the model's prediction plus Gaussian noise: $y_i = f(x_i)+\varepsilon$, $\varepsilon\sim\mathcal{N}(0,\sigma^2)$. The likelihood of the data is a product of Gaussians; take the negative log:</p>
+
+<div class="mathband">$$ -\log L = \frac{1}{2\sigma^2}\sum_{i}\big(y_i-f(x_i)\big)^2 + \text{const} $$</div>
+
+<p>Minimizing this NLL is <em>identical</em> to minimizing $\sum(y_i-f(x_i))^2$ — the <strong>sum of squared errors</strong>. So <strong>MSE is not an arbitrary choice</strong>: least-squares regression is exactly maximum likelihood under the assumption of Gaussian noise. The Gaussian's squared term in the exponent (Session 13) <em>is</em> the squared error.</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Bernoulli likelihood → cross-entropy</h2>
+
+<p>For binary classification, the model outputs $q_i=P(y_i=1)$ (a sigmoid, Session 13). Each label is Bernoulli, so the likelihood is $\prod q_i^{y_i}(1-q_i)^{1-y_i}$. The negative log-likelihood is:</p>
+
+<div class="mathband">$$ -\log L = -\sum_i \Big[\,y_i\log q_i + (1-y_i)\log(1-q_i)\,\Big] $$</div>
+
+<p>That's <strong>binary cross-entropy</strong> — the standard classification loss — derived, not invented. For multiple classes the categorical (softmax) likelihood gives $-\sum_i \log q_i(\text{true class})$: penalize the model by the negative log-probability it assigned to the correct answer. Confident-and-wrong ($q\to0$) is punished toward infinity, which is why cross-entropy trains classifiers so sharply.</p>
+
+<div class="callout c-good"><span class="tag">The unifying picture</span>
+Every standard loss is a negative log-likelihood: <b>Gaussian → MSE</b>, <b>Bernoulli → binary cross-entropy</b>, <b>categorical → cross-entropy</b>, <b>Poisson → Poisson loss</b>. Pick the distribution your target follows; its NLL is your loss.</div>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>MAP — priors become regularization <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §8.3</a></h2>
+
+<p>MLE trusts the data completely, which overfits when data is scarce. Bring back Bayes (Session 12): multiply the likelihood by a <strong>prior</strong> on the parameters and maximize the <em>posterior</em> — that's <strong>Maximum A Posteriori (MAP)</strong> estimation. Taking negative logs:</p>
+
+<div class="mathband">$$ \hat\theta_{\text{MAP}}=\arg\min_\theta\ \underbrace{-\log P(\text{data}\mid\theta)}_{\text{loss (NLL)}}\ \underbrace{-\ \log P(\theta)}_{\text{regularizer}} $$</div>
+
+<details class="deeper"><summary>Going deeper — Gaussian prior = L2, Laplace prior = L1</summary><div class="deep-body">
+  <p>The regularizer is just the negative-log of the prior. A <strong>Gaussian prior</strong> on the weights, $P(\mathbf{w})\propto e^{-\lambda\lVert\mathbf{w}\rVert^2}$, contributes $+\lambda\lVert\mathbf{w}\rVert_2^2$ — exactly <strong>L2 / ridge</strong> regularization (Session 1's norms return). A <strong>Laplace prior</strong>, $\propto e^{-\lambda\lVert\mathbf{w}\rVert_1}$, contributes $+\lambda\lVert\mathbf{w}\rVert_1$ — <strong>L1 / lasso</strong>, which drives weights to zero (sparsity). So "add a regularization penalty" and "assume a prior belief that weights are small" are the same statement. This closes the loop: probability (prior) ↔ optimization (penalty). <span class="secs">See <b>MML §8.3</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>In NumPy — and where it lives in ML</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="c"># MLE for a coin: the maximizer is just the observed proportion</span>
+flips = np.array([<span class="n">1</span>,<span class="n">1</span>,<span class="n">0</span>,<span class="n">1</span>,<span class="n">1</span>,<span class="n">0</span>,<span class="n">1</span>,<span class="n">1</span>,<span class="n">1</span>,<span class="n">0.</span>])   <span class="c"># 7 heads / 10</span>
+loglik = <span class="k">lambda</span> p: np.sum(flips*np.log(p) + (<span class="n">1</span>-flips)*np.log(<span class="n">1</span>-p))
+ps = np.linspace(<span class="n">0.01</span>,<span class="n">0.99</span>,<span class="n">99</span>)
+<span class="f">print</span>(<span class="f">round</span>(ps[np.argmax([loglik(p) <span class="k">for</span> p <span class="k">in</span> ps])],<span class="n">2</span>))   <span class="c"># 0.70 = 7/10</span>
+
+<span class="c"># cross-entropy loss = negative log-likelihood of the labels</span>
+y = np.array([<span class="n">1</span>,<span class="n">0</span>,<span class="n">1</span>,<span class="n">1</span>]); q = np.array([<span class="n">0.9</span>,<span class="n">0.2</span>,<span class="n">0.8</span>,<span class="n">0.6</span>])
+bce = -np.mean(y*np.log(q) + (<span class="n">1</span>-y)*np.log(<span class="n">1</span>-q))
+<span class="f">print</span>(<span class="f">round</span>(bce,<span class="n">4</span>))                              <span class="c"># binary cross-entropy</span>
+
+<span class="c"># confident-and-wrong is punished hard</span>
+<span class="f">print</span>(-np.log(<span class="n">0.01</span>))                             <span class="c"># 4.6  (predicted 1% for the true class)</span></pre>
+<div class="out">0.7
+0.2027
+4.605170185988092</div>
+
+<ul>
+  <li><strong>Your loss <em>is</em> a likelihood.</strong> <code>MSELoss</code> ← Gaussian, <code>BCELoss</code>/<code>CrossEntropyLoss</code> ← Bernoulli/categorical. Choosing a loss = choosing a noise/output model.</li>
+  <li><strong>Training = MLE.</strong> Minimizing the loss by gradient descent (Session 11) is maximizing the likelihood of the training data.</li>
+  <li><strong>Regularization = a prior (MAP).</strong> Weight decay is a Gaussian prior; L1 is Laplace. The λ is how strongly you believe weights are small.</li>
+  <li><strong>Why not accuracy as a loss?</strong> It's flat/non-differentiable; the NLL (cross-entropy) is smooth and gives gradients — so we optimize it and <em>report</em> accuracy.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Pick the distribution your data/target follows, write its likelihood, take the negative log — that's your loss. Gaussian → MSE, Bernoulli/categorical → cross-entropy. Add a prior and you get regularization. Training is maximum likelihood by gradient descent.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Always use log-likelihood</strong> — raw products of probabilities underflow to 0 for any real dataset.</li>
+  <li><strong>$\log 0=-\infty$</strong> — a model that assigns probability 0 to something that happened gives infinite loss; clip predictions (e.g. to $[\varepsilon,1-\varepsilon]$).</li>
+  <li><strong>MLE can overfit</strong> with little data (e.g. a coin seen once → $\hat p\in\{0,1\}$). MAP / priors fix this.</li>
+  <li><strong>Loss ⇔ assumption:</strong> using MSE assumes Gaussian noise; heavy-tailed targets may want a different likelihood (e.g. Huber/Laplace).</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li><strong>Likelihood</strong> = $P(\text{data}\mid\theta)$ with data fixed; <strong>MLE</strong> maximizes it.</li>
+  <li>Maximize <strong>log-likelihood</strong> = minimize <strong>negative log-likelihood</strong> = your loss.</li>
+  <li><strong>Gaussian → MSE</strong>; <strong>Bernoulli/categorical → cross-entropy</strong>.</li>
+  <li><strong>MAP</strong> = MLE + prior; the prior's neg-log is the <strong>regularizer</strong> (Gaussian→L2, Laplace→L1).</li>
+  <li>Training a model = <strong>maximum likelihood via gradient descent</strong>.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Multiplying probabilities directly</span>
+$\prod p_i$ underflows to 0 fast. Always work in log-space (sum of logs) — it's why every framework computes <em>log</em>-likelihoods / log-softmax.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · log(0) blow-ups</span>
+A confident-wrong prediction ($q=0$ for a true class) gives infinite cross-entropy and NaNs. Use <code>log_softmax</code>/logits or clip probabilities away from 0 and 1.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Forgetting the loss encodes an assumption</span>
+MSE ⇔ Gaussian noise. If your targets are skewed, bounded, or counts, a different likelihood (and loss) may fit far better than blindly using squared error.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">Least-squares (MSE) regression is maximum likelihood under which assumption?</div>
+  <button class="opt">Uniform noise.</button>
+  <button class="opt">Gaussian noise on the targets.</button>
+  <button class="opt">No assumption — MSE is arbitrary.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">Adding an L2 penalty $\lambda\lVert w\rVert^2$ to the loss corresponds to…</div>
+  <button class="opt">Changing the learning rate.</button>
+  <button class="opt">Using a bigger dataset.</button>
+  <button class="opt">A Gaussian prior on the weights (MAP estimation).</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>For 7 heads in 10 flips, scan $p\in(0,1)$ and find the MLE numerically. Does it equal 0.7?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">k,n=<span class="n">7</span>,<span class="n">10</span>; ps=np.linspace(<span class="n">.01</span>,<span class="n">.99</span>,<span class="n">99</span>)
+ll=[k*np.log(p)+(n-k)*np.log(<span class="n">1</span>-p) <span class="k">for</span> p <span class="k">in</span> ps]
+ps[np.argmax(ll)]   <span class="c"># ~0.70 = k/n</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Compute binary cross-entropy for $y=[1,0,1]$, $q=[0.9,0.1,0.8]$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">y=np.array([<span class="n">1</span>,<span class="n">0</span>,<span class="n">1</span>]); q=np.array([<span class="n">.9</span>,<span class="n">.1</span>,<span class="n">.8</span>])
+-np.mean(y*np.log(q)+(<span class="n">1</span>-y)*np.log(<span class="n">1</span>-q))   <span class="c"># ~0.144</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Show numerically that the Gaussian MLE for the mean equals the sample mean: scan $\mu$ minimizing $\sum(x_i-\mu)^2$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">x=np.array([<span class="n">2.</span>,<span class="n">4</span>,<span class="n">4</span>,<span class="n">5</span>,<span class="n">9</span>]); mus=np.linspace(<span class="n">0</span>,<span class="n">10</span>,<span class="n">1001</span>)
+mus[np.argmin([((x-m)**<span class="n">2</span>).sum() <span class="k">for</span> m <span class="k">in</span> mus])], x.mean()   <span class="c"># ~4.8, 4.8</span></pre>
+    <p>Minimizing squared error lands on the sample mean — the Gaussian MLE.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Plot cross-entropy $-\log q$ for the true class as $q$ goes from 0.01 to 1. What happens near 0?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>It diverges to $+\infty$ as $q\to0$ (confident-and-wrong is punished without bound) and is 0 at $q=1$ (perfectly confident-and-right). That steep penalty is what makes cross-entropy train sharply.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Add an L2 prior: minimize $\sum(y_i-wx_i)^2 + \lambda w^2$ for a few $\lambda$. Show larger $\lambda$ shrinks $\hat w$ toward 0.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">x=np.random.rand(<span class="n">50</span>); y=<span class="n">3</span>*x+<span class="n">0.1</span>*np.random.randn(<span class="n">50</span>)
+<span class="k">for</span> lam <span class="k">in</span> [<span class="n">0</span>,<span class="n">1</span>,<span class="n">10</span>,<span class="n">100</span>]:
+    w=(x&#64;y)/(x&#64;x+lam)          <span class="c"># ridge closed form</span>
+    <span class="f">print</span>(lam, <span class="f">round</span>(w,<span class="n">3</span>))       <span class="c"># w shrinks toward 0 as lambda grows</span></pre>
+    <p>The MAP estimate under a Gaussian prior (ridge) pulls $\hat w$ toward 0 — stronger prior (larger $\lambda$), more shrinkage.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What is maximum likelihood estimation?</div><div class="a">Choosing the parameters that maximize the probability of the observed data, $P(\text{data}\mid\theta)$. In practice we maximize the log-likelihood (equivalently minimize the negative log-likelihood).</div></div>
+<div class="qa"><div class="q">Q2 · Why is MSE the loss for regression?</div><div class="a">It's the negative log-likelihood under the assumption of Gaussian noise on the targets — least squares is MLE for a Gaussian model.</div></div>
+<div class="qa"><div class="q">Q3 · Where does cross-entropy come from?</div><div class="a">It's the negative log-likelihood of Bernoulli (binary) or categorical (multiclass) labels — $-\sum \log q(\text{true class})$. Minimizing it maximizes the probability the model assigns to the correct answers.</div></div>
+<div class="qa"><div class="q">Q4 · How does MAP relate to MLE and regularization?</div><div class="a">MAP maximizes likelihood × prior. Its negative log is loss + a penalty from the prior: a Gaussian prior gives L2 (ridge), a Laplace prior gives L1 (lasso). Regularization is a prior belief that weights are small.</div></div>
+<div class="qa"><div class="q">Q5 · Why work in log-space?</div><div class="a">Products of many probabilities underflow numerically and are hard to differentiate; the log turns them into stable, differentiable sums without changing the maximizer.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Likelihood / MLE</td><td>The principle behind fitting any model</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Negative log-likelihood</td><td>Every loss function is one</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Gaussian → MSE</td><td>Why regression uses squared error</td><td class="freq f-h">High</td></tr>
+  <tr><td>Bernoulli/categorical → cross-entropy</td><td>Why classification uses it</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>MAP → regularization</td><td>L2 = Gaussian prior, L1 = Laplace prior</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Final session</span>
+  <h3><a href="../18_information_theory/theory.html" style="border:0;color:inherit">18 · Information theory →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Cross-entropy came from likelihood here; information theory reveals its deeper meaning — entropy, cross-entropy, and KL divergence, the bits-and-surprise view that closes the course.</p>
+</div>

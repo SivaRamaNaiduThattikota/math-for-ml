@@ -224,6 +224,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 14 — Expectation, variance & covariance** (correlation scatter with live covariance ellipse, MML §6.4/6.5 + variance-of-a-sum & variances-add deep-dive).
 - ✅ **Session 15 — Sampling & the CLT** (CLT demonstrator: non-Gaussian source + sample-size slider → bell emerges, extends MML §6.4 + exact-CLT-statement deep-dive).
 - ✅ **Session 16 — Inference & hypothesis testing** (A/B test simulator with CI whiskers + two-proportion z-test, classical stats + what-a-p-value-is-not deep-dive).
+- ✅ **Session 17 — MLE & cross-entropy** (coin likelihood-curve MLE explorer, MML §8.3/§9 + Gaussian→MSE, Bernoulli→cross-entropy, MAP→L2/L1-prior deep-dive).
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 - ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).

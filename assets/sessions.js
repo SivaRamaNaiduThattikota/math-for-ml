@@ -23,6 +23,6 @@ window.MFML_SESSIONS = [
   ["prob","14","14_expectation_covariance","Expectation, variance & covariance","Summarizing randomness; the covariance matrix.",true],
   ["prob","15","15_sampling_clt","Sampling & the CLT","Why averages are well-behaved even when data isn't.",true],
   ["prob","16","16_inference","Inference & hypothesis testing","Confidence intervals, p-values, and A/B tests.",true],
-  ["prob","17","17_mle_cross_entropy","MLE & cross-entropy","Where loss functions actually come from.",false],
+  ["prob","17","17_mle_cross_entropy","MLE & cross-entropy","Where loss functions actually come from.",true],
   ["info","18","18_information_theory","Information theory","Entropy, cross-entropy, and KL divergence.",false],
 ].map(([group,num,slug,title,desc,ready])=>({group,num,slug,title,desc,ready}));

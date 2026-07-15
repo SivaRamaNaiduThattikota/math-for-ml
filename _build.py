@@ -154,7 +154,15 @@ SESSIONS = [
               ("s3","3 · Errors & power"),("s4","4 · A/B testing"),("s5","5 · Pitfalls"),
               ("s6","6 · NumPy & ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 17–18 get appended here as each _content.html is authored.
+    dict(num="17", slug="17_mle_cross_entropy", title="MLE & cross-entropy",
+         lede="Where loss functions come from: maximum likelihood. Its negative log gives "
+              "MSE and cross-entropy; add a prior and you get regularization.",
+         meta=["~22 min read", "NumPy paired notebook", "Prereq: Distributions, Bayes"],
+         toc=[("s1","1 · Likelihood"),("s2","2 · MLE & log-likelihood"),
+              ("s3","3 · Gaussian → MSE"),("s4","4 · Bernoulli → cross-entropy"),
+              ("s5","5 · MAP → regularization"),("s6","6 · NumPy & ML"),("ref","Rules & traps"),
+              ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
+    # Session 18 gets appended here.
 ]
 
 GROUP = {  # eyebrow label per session range
