@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Derivatives & gradients · Math for ML</title>
+<meta name="description" content="The slope tells you which way is downhill. The derivative is how a function changes when you nudge its input — the engine of every training loop.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Derivatives & gradients · Math for ML">
+<meta property="og:description" content="The slope tells you which way is downhill. The derivative is how a function changes when you nudge its input — the engine of every training loop.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="08_derivatives">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · Derivative = slope</a>
+  <a href="#s2">2 · Reading it</a>
+  <a href="#s3">3 · The rules</a>
+  <a href="#s4">4 · Derivative → gradient</a>
+  <a href="#s5">5 · NumPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Calculus · 08</div>
+    <h1>Derivatives & gradients</h1>
+    <p class="lede">The slope tells you which way is downhill. The derivative is how a function changes when you nudge its input — the engine of every training loop.</p>
+    <div class="meta"><span>~18 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: none (calculus start)</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">Linear algebra let us <em>move</em> data. Calculus lets us <em>improve</em> it. Every model you train has a knob-covered dashboard — its parameters — and a single number saying how wrong it is: the loss. Training is the search for the knob settings that make the loss small, and the tool that tells you which way to turn each knob is the <strong>derivative</strong>: the rate at which the output changes when you nudge the input.</p>
+
+<p>Master this one idea — "the slope tells you which way is downhill" — and gradient descent, backpropagation, and the whole training loop become mechanical. This session builds the derivative in one variable; the <strong>gradient</strong> (its multi-input big sibling) is previewed here and detailed next session.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Define the derivative as the <strong>slope of the tangent</strong> / instantaneous rate of change.</li>
+    <li>Read a derivative's <strong>sign</strong> (up/down) and <strong>magnitude</strong> (steepness), and spot <strong>critical points</strong> where it's zero.</li>
+    <li>Use the handful of differentiation rules that cover most of ML.</li>
+    <li>See the <strong>gradient</strong> as the vector of slopes that points uphill — so <em>minus</em> the gradient points downhill.</li>
+    <li>Compute derivatives numerically in NumPy and connect them to loss minimization.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§5.1 Differentiation of Univariate Functions</span> (Chapter 5, Vector Calculus). We build the intuition; that section gives the formal limits and rules.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">The derivative = slope</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Reading it</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">The rules you need</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Derivative → gradient</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$f'(x),\ \frac{df}{dx}$</span><span class="def">The derivative of $f$ — its slope / rate of change at $x$.</span>
+    <span class="sym">$\lim_{h\to 0}$</span><span class="def">"As $h$ shrinks toward 0" — the limit defining the derivative.</span>
+    <span class="sym">$\nabla f$</span><span class="def">The gradient — the vector of partial derivatives (Session 9).</span>
+    <span class="sym">$\frac{\partial f}{\partial x_i}$</span><span class="def">A partial derivative — slope in one input direction (Session 9).</span>
+    <span class="sym">$\eta$</span><span class="def">Learning rate — the step size along $-\nabla f$ (Session 11).</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>The derivative is the slope of the tangent <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §5.1</a></h2>
+
+<p>The <strong>derivative</strong> of $f$ at a point is how fast $f$ changes there — the slope of the line that just grazes the curve (the <em>tangent</em>). It's defined as the limit of the slope of a shrinking secant line:</p>
+
+<div class="mathband">$$ f'(x) = \lim_{h\to 0}\frac{f(x+h)-f(x)}{h} $$</div>
+
+<p>"Rise over run" as the run $h$ shrinks to nothing. The result is a <em>new function</em> $f'$ that reports the slope at every point. Scrub across the curve below and watch the tangent — and its slope — change.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="dplay" width="880" height="470"></canvas>
+    <div class="ctrlrow"><span class="lbl2">f(x):</span>
+      <button class="ctrl" data-key="sq">x²</button>
+      <button class="ctrl" data-key="cubic">x³ − 3x</button>
+      <button class="ctrl" data-key="sin">sin x</button>
+      <button class="ctrl" data-key="exp">eˣ</button>
+    </div>
+    <div class="readout">
+      <span><span class="k">x</span> = <span class="vd" id="rX">…</span></span>
+      <span><span class="k">f(x)</span> = <span class="va" id="rFx">…</span></span>
+      <span><span class="k">f'(x) = slope</span> = <span class="vs" id="rSlope">…</span></span>
+      <span id="rNote" class="vb">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Drag left/right to move the point; the amber line is the tangent.</strong> Its slope is $f'(x)$, shown live. Where the curve rises the slope is positive; where it falls, negative; at the very top or bottom of a hump the tangent goes <em>flat</em> ($f'(x)=0$) — a <b>critical point</b>. Try <b>x³ − 3x</b>: it has two of them, a local max and a local min.</figcaption>
+</figure>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+You already read slopes every day: a trend line's steepness, or <code>(this_month − last_month)</code> as a rate of change. The derivative is just that idea taken to the limit — the <em>instantaneous</em> rate instead of a month-to-month difference. ML uses it to ask "if I nudge this weight a hair, how much does the loss move?"</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Reading a derivative</h2>
+
+<p>The derivative packs three signals into one number:</p>
+<ul>
+  <li><strong>Sign</strong> — $f'(x)>0$: the function is <em>increasing</em> (going right takes you up); $f'(x)<0$: <em>decreasing</em>.</li>
+  <li><strong>Magnitude</strong> — big $|f'(x)|$ means steep, small means nearly flat. A weight with a large loss-derivative matters more.</li>
+  <li><strong>Zero</strong> — $f'(x)=0$ marks a <strong>critical point</strong>: a local minimum, local maximum, or a saddle/flat spot. Minimizing a loss means <em>finding where its derivative is zero</em> — the bottom of the valley.</li>
+</ul>
+
+<div class="callout c-why"><span class="tag">Why it matters</span>
+Training a model = minimizing a loss. The minimum sits where the derivative (gradient) is zero, and you get there by repeatedly stepping <em>opposite</em> the slope. Everything about optimization is reading and following this one number.</div>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>The rules you actually need</h2>
+
+<p>You rarely take limits by hand — a few rules cover almost everything in ML:</p>
+
+<div class="mathband">$$ \frac{d}{dx}\,c = 0, \qquad \frac{d}{dx}\,x^n = n\,x^{n-1}, \qquad \frac{d}{dx}\,e^x = e^x, \qquad \frac{d}{dx}\ln x = \frac{1}{x} $$</div>
+<div class="mathband">$$ \frac{d}{dx}\sin x = \cos x, \qquad (f+g)' = f' + g', \qquad (c\,f)' = c\,f' $$</div>
+
+<p>So $\frac{d}{dx}(3x^2 + 2x) = 6x + 2$. The <strong>product rule</strong> $(fg)'=f'g+fg'$ and especially the <strong>chain rule</strong> handle compositions — the chain rule is so central to neural networks (backprop) that it gets its own session (10). For now, notice that these rules make derivatives <em>mechanical</em>, which is exactly why software can automate them.</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>From derivative to gradient</h2>
+
+<p>A loss doesn't depend on one weight — it depends on millions. So we need the derivative with respect to <em>each</em> input, collected into a vector. That vector is the <strong>gradient</strong>, written $\nabla f$:</p>
+
+<div class="mathband">$$ \nabla f = \left[\frac{\partial f}{\partial x_1},\ \frac{\partial f}{\partial x_2},\ \dots,\ \frac{\partial f}{\partial x_n}\right] $$</div>
+
+<p>Each entry (a <em>partial derivative</em>, Session 9) is the slope in one input direction. The gradient's magic property: <strong>it points in the direction of steepest ascent</strong> — the fastest way uphill. So $-\nabla f$ points steepest <em>downhill</em>, which is precisely the direction gradient descent steps to reduce the loss (Session 11). A vector of slopes, pointing the way up; negate it to go down.</p>
+
+<details class="deeper"><summary>Going deeper — when does a derivative exist?</summary><div class="deep-body">
+  <p>The limit definition only gives an answer if the left and right secant slopes agree. A smooth curve is <strong>differentiable</strong> everywhere; a sharp corner is not. The classic example is $f(x)=|x|$ at $x=0$: the slope is $-1$ coming from the left and $+1$ from the right, so there's no single tangent — the derivative is undefined there. This matters in ML: <strong>ReLU</strong> $\max(0,x)$ has exactly this kink at 0, so frameworks just pick a subgradient (usually 0) there. Differentiability is also why smooth activations (sigmoid, GELU) were historically preferred — you can differentiate them everywhere. <span class="secs">See <b>MML §5.1</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> <span class="f">f</span>(x): <span class="k">return</span> x**<span class="n">2</span>          <span class="c"># f(x) = x^2, so f'(x) = 2x</span>
+
+<span class="c"># numerical derivative (central finite difference)</span>
+<span class="k">def</span> <span class="f">deriv</span>(f, x, h=<span class="n">1e-5</span>):
+    <span class="k">return</span> (f(x + h) - f(x - h)) / (<span class="n">2</span>*h)
+
+<span class="f">print</span>(<span class="f">deriv</span>(f, <span class="n">3.0</span>))     <span class="c"># 6.0000  (matches 2x = 6)</span>
+<span class="f">print</span>(<span class="f">deriv</span>(np.sin, <span class="n">0.0</span>)) <span class="c"># 1.0     (cos 0 = 1)</span>
+
+<span class="c"># the slope over a whole range, vectorized</span>
+xs = np.linspace(<span class="n">-3</span>, <span class="n">3</span>, <span class="n">7</span>)
+<span class="f">print</span>(<span class="f">deriv</span>(f, xs))       <span class="c"># [-6 -4 -2 0 2 4 6] = 2x</span></pre>
+<div class="out">6.000000000039306
+0.9999999999898845
+[-6. -4. -2.  0.  2.  4.  6.]</div>
+
+<div class="callout c-warn"><span class="tag">Finite differences are a check, not a workhorse</span>
+The <code>(f(x+h)−f(x−h))/2h</code> trick is great for <em>verifying</em> a gradient, but it's slow (one function call per input) and imprecise. Real ML uses <strong>automatic differentiation</strong> (PyTorch/JAX) — it applies the chain rule symbolically through your code to get exact gradients cheaply. You'll meet it properly in Session 10.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>The training loop.</strong> Compute the loss, compute its gradient w.r.t. every parameter, step opposite the gradient. Repeat. That's ~all of supervised learning.</li>
+  <li><strong>Why activations are differentiable.</strong> Backprop needs derivatives at every layer, so activation functions are chosen to be (mostly) differentiable.</li>
+  <li><strong>Learning rate = step size</strong> ($\eta$). Too big and you overshoot the valley; too small and training crawls — a direct consequence of derivative magnitude (Session 11).</li>
+  <li><strong>Automatic differentiation</strong> turns "take the derivative" from a manual chore into a single <code>loss.backward()</code>.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+The derivative is the slope; the gradient is the vector of slopes that points uphill. Learning is walking downhill along $-\nabla f$. Everything else in the calculus pillar is making that precise and efficient.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Not everything is differentiable:</strong> corners (|x|, ReLU at 0) have no unique slope — frameworks use a subgradient.</li>
+  <li><strong>Zero derivative ≠ minimum:</strong> it could be a maximum or a saddle. You need more (second derivative / context) to tell which.</li>
+  <li><strong>Finite-difference step $h$:</strong> too large → inaccurate; too small → floating-point cancellation. $h\approx 10^{-5}$ (central) is a decent default.</li>
+  <li><strong>Units matter:</strong> a derivative's magnitude depends on feature scale — another reason to standardize inputs (Session 1).</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>The derivative is the <strong>slope of the tangent</strong> — instantaneous rate of change.</li>
+  <li><strong>Sign</strong> = up/down, <strong>magnitude</strong> = steepness, <strong>zero</strong> = critical point.</li>
+  <li>Know the basics: $x^n\to nx^{n-1}$, $e^x\to e^x$, $\ln x\to 1/x$, $\sin\to\cos$; sums and constants pass through.</li>
+  <li>The <strong>gradient</strong> $\nabla f$ is the vector of partials; it points <strong>steepest uphill</strong>, so $-\nabla f$ goes downhill.</li>
+  <li>Verify gradients with finite differences; compute them for real with <strong>autodiff</strong>.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Zero gradient ⇒ "done"</span>
+A zero derivative is necessary for a minimum but not sufficient — saddle points and maxima also have it. Deep-learning losses are full of saddles; that's why optimizers add momentum (Session 11).</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Trusting finite differences too far</span>
+They're for sanity checks. Shrinking $h$ indefinitely makes it <em>worse</em> (round-off), not better. Use autodiff for production gradients.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Ignoring non-differentiable points</span>
+ReLU's kink, abs losses, hard thresholds — know where your function isn't smooth, because optimizers behave differently there.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">At a point, $f'(x) = 0$. What can you conclude?</div>
+  <button class="opt">It's definitely the minimum.</button>
+  <button class="opt">It's a critical point — could be a min, max, or saddle; need more info.</button>
+  <button class="opt">The function is undefined there.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">Which direction reduces a loss fastest?</div>
+  <button class="opt">The gradient ∇f itself.</button>
+  <button class="opt">Perpendicular to the gradient.</button>
+  <button class="opt">The negative gradient, −∇f (steepest downhill).</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>. Do the by-hand ones first, then check with finite differences.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Differentiate $f(x)=3x^2+2x-5$ by hand. Evaluate $f'(2)$, then verify numerically.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$f'(x)=6x+2$, so $f'(2)=14$.</p>
+    <pre class="code">f=<span class="k">lambda</span> x:<span class="n">3</span>*x**<span class="n">2</span>+<span class="n">2</span>*x-<span class="n">5</span>
+(f(<span class="n">2</span>+<span class="n">1e-5</span>)-f(<span class="n">2</span>-<span class="n">1e-5</span>))/(<span class="n">2</span>*<span class="n">1e-5</span>)   <span class="c"># ~14.0</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Where is the derivative of $f(x)=x^2$ zero, and what kind of point is it?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$f'(x)=2x=0$ at $x=0$ — the global <strong>minimum</strong> (the parabola's bottom).</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Find the critical points of $f(x)=x^3-3x$ and classify each (max or min) by checking the slope on either side.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$f'(x)=3x^2-3=0 \Rightarrow x=\pm1$. At $x=-1$: slope goes $+\to-$ → local <strong>max</strong>. At $x=+1$: slope goes $-\to+$ → local <strong>min</strong>. (Matches the demo's two humps.)</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Write a <code>deriv(f, x)</code> finite-difference function and confirm it gives $\cos$ as the derivative of $\sin$ across $x\in[0,2\pi]$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">deriv=<span class="k">lambda</span> f,x,h=<span class="n">1e-5</span>:(f(x+h)-f(x-h))/(<span class="n">2</span>*h)
+xs=np.linspace(<span class="n">0</span>,<span class="n">2</span>*np.pi,<span class="n">100</span>)
+np.allclose(deriv(np.sin,xs), np.cos(xs), atol=<span class="n">1e-4</span>)   <span class="c"># True</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>The MSE loss for one point is $L(w)=(wx-y)^2$ with $x=2,y=6$. Find $\frac{dL}{dw}$, the $w$ that minimizes $L$, and take one gradient-descent step from $w=0$ with $\eta=0.1$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$L(w)=(2w-6)^2$, so $\frac{dL}{dw}=2(2w-6)(2)=8w-24$. Minimum where $8w-24=0 \Rightarrow w=3$ (indeed $3\cdot2=6=y$). From $w=0$: gradient $=-24$, step $w\leftarrow 0-0.1(-24)=2.4$ — already close to 3 after one step.</p>
+    <pre class="code">L=<span class="k">lambda</span> w:(<span class="n">2</span>*w-<span class="n">6</span>)**<span class="n">2</span>; g=<span class="k">lambda</span> w:<span class="n">8</span>*w-<span class="n">24</span>
+w=<span class="n">0</span>; w=w-<span class="n">0.1</span>*g(w)   <span class="c"># 2.4</span></pre>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What is a derivative, intuitively and formally?</div><div class="a">The instantaneous rate of change — the slope of the tangent line. Formally the limit of the secant slope $(f(x+h)-f(x))/h$ as $h\to 0$.</div></div>
+<div class="qa"><div class="q">Q2 · What does a zero derivative tell you?</div><div class="a">It's a critical point — a candidate minimum, maximum, or saddle. Necessary for an optimum but not sufficient; you need more (second derivative, or the shape) to classify it.</div></div>
+<div class="qa"><div class="q">Q3 · What is the gradient and why the negative of it?</div><div class="a">The vector of partial derivatives; it points in the direction of steepest ascent. To minimize a loss you step along $-\nabla f$, the steepest-descent direction.</div></div>
+<div class="qa"><div class="q">Q4 · How do finite differences and autodiff differ?</div><div class="a">Finite differences approximate the slope with small perturbations — simple but slow and imprecise. Autodiff applies the chain rule through the computation graph for exact, cheap gradients; it's what frameworks use.</div></div>
+<div class="qa"><div class="q">Q5 · Why does differentiability matter for activation functions?</div><div class="a">Backprop needs a derivative at each layer. Smooth activations are differentiable everywhere; ReLU has a kink at 0, handled with a subgradient.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Derivative = slope</td><td>How the loss responds to a weight nudge</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Sign / magnitude / zero</td><td>Direction, step size, critical points</td><td class="freq f-h">High</td></tr>
+  <tr><td>Differentiation rules</td><td>Make gradients mechanical → autodiff</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Gradient ∇f</td><td>Vector of slopes; steepest ascent</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>−∇f = downhill</td><td>The direction gradient descent steps</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Differentiability</td><td>ReLU kink, smooth activations, autodiff</td><td class="freq f-m">Medium</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../09_partial_derivatives/theory.html" style="border:0;color:inherit">09 · Partial derivatives & the Jacobian →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">A loss has many inputs. A <em>partial</em> derivative measures the slope in one input's direction while the others hold still — stack them and you get the gradient (and, for vector outputs, the Jacobian).</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 8 — derivative scrubber: drag along a curve, watch the tangent slope
+(function(){
+  const cv=document.getElementById('dplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, O={x:W*0.5,y:H*0.60}, S=46;
+  const FN={ sq:x=>x*x, cubic:x=>x*x*x-3*x, sin:x=>Math.sin(x), exp:x=>Math.exp(x) };
+  let key='sq', x0=1.2, drag=false;
+  const P=(x,y)=>({x:O.x+x*S, y:O.y-y*S});
+  const f=x=>FN[key](x);
+  const deriv=x=>{const h=1e-4; return (f(x+h)-f(x-h))/(2*h);};
+  const YMAX=(H*0.9)/S;   // clip curve beyond this |y| in world units
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#EDEAE0';ctx.lineWidth=1;
+    for(let x=O.x%S;x<W;x+=S){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=O.y%S;y<H;y+=S){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,O.y);ctx.lineTo(W,O.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O.x,0);ctx.lineTo(O.x,H);ctx.stroke();
+
+    // curve
+    ctx.strokeStyle='#5A4FCF';ctx.lineWidth=3;ctx.beginPath();
+    let pen=false;
+    for(let px=0;px<=W;px+=2){
+      const wx=(px-O.x)/S, wy=f(wx);
+      if(!isFinite(wy)||Math.abs(wy)>YMAX){pen=false;continue;}
+      const p=P(wx,wy); if(pen)ctx.lineTo(p.x,p.y); else ctx.moveTo(p.x,p.y); pen=true;
+    }
+    ctx.stroke();
+
+    // tangent at x0
+    const y0=f(x0), m=deriv(x0);
+    const xa=x0-4.5, xb=x0+4.5;
+    const A=P(xa, y0+m*(xa-x0)), B=P(xb, y0+m*(xb-x0));
+    ctx.strokeStyle='#B07514';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+    // point
+    const pt=P(x0,y0);
+    ctx.fillStyle='#fff';ctx.strokeStyle='#B07514';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(pt.x,pt.y,7,0,7);ctx.fill();ctx.stroke();
+    upd(y0,m);
+  }
+  function upd(y0,m){
+    const r=x=>Math.round(x*100)/100, el=id=>document.getElementById(id);
+    el('rX').textContent=r(x0); el('rFx').textContent=r(y0); el('rSlope').textContent=r(m);
+    const n=el('rNote');
+    if(Math.abs(m)<0.08){ n.textContent='flat — critical point!'; n.style.color='#0E8C80'; }
+    else if(m>0){ n.textContent='increasing ↗'; n.style.color='var(--muted)'; }
+    else { n.textContent='decreasing ↘'; n.style.color='var(--muted)'; }
+    document.querySelectorAll('.ctrl').forEach(b=>b.classList.toggle('active', b.dataset.key===key));
+  }
+  function pos(e){const R=cv.getBoundingClientRect(),sx=cv.width/R.width,s=e.touches?e.touches[0]:e;return (s.clientX-R.left)*sx;}
+  function setX(px){ x0=Math.round(((px-O.x)/S)*20)/20; draw(); }
+  function down(e){drag=true;setX(pos(e));e.preventDefault();}
+  function move(e){if(!drag)return;e.preventDefault();setX(pos(e));}
+  function up(){drag=false;}
+  cv.addEventListener('mousedown',down);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
+  document.querySelectorAll('.ctrl').forEach(b=>b.addEventListener('click',()=>{ key=b.dataset.key; draw(); }));
+
+  draw();
+})();
+</script>
+</body>
+</html>

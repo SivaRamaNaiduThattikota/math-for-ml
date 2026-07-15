@@ -82,7 +82,15 @@ SESSIONS = [
               ("s3","3 · Low-rank approximation"),("s4","4 · PCA"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 08–18 get appended here as each _content.html is authored.
+    dict(num="08", slug="08_derivatives", title="Derivatives & gradients",
+         lede="The slope tells you which way is downhill. The derivative is how a function "
+              "changes when you nudge its input — the engine of every training loop.",
+         meta=["~18 min read", "NumPy paired notebook", "Prereq: none (calculus start)"],
+         toc=[("s1","1 · Derivative = slope"),("s2","2 · Reading it"),
+              ("s3","3 · The rules"),("s4","4 · Derivative → gradient"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 09–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range
