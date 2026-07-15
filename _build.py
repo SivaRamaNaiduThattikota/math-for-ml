@@ -122,7 +122,15 @@ SESSIONS = [
               ("s3","3 · Independence"),("s4","4 · Bayes' theorem"),("s5","5 · The base rate"),
               ("s6","6 · NumPy & ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 13–18 get appended here as each _content.html is authored.
+    dict(num="13", slug="13_distributions", title="Distributions",
+         lede="How probability spreads over values. Bernoulli, binomial, and the Gaussian — "
+              "plus the multivariate Gaussian that powers so much of ML.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Probability & Bayes"],
+         toc=[("s1","1 · Random variables"),("s2","2 · Bernoulli & binomial"),
+              ("s3","3 · The Gaussian"),("s4","4 · Multivariate Gaussian"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    # Sessions 14–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range

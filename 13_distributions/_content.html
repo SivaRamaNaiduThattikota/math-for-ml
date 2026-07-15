@@ -1,0 +1,263 @@
+<p class="dropcap">A single probability answers one yes/no question. A <strong>distribution</strong> answers all of them at once: it describes how probability is spread across <em>every</em> possible value a quantity can take. Model a coin flip, a count of clicks, a measurement's noise, or a whole cloud of correlated features — each is a distribution. And one distribution, the <strong>Gaussian</strong>, shows up so relentlessly in machine learning that understanding its two parameters unlocks half the field.</p>
+
+<p>This session catalogues the workhorses — Bernoulli, binomial, and above all the Gaussian and its multivariate form — the shapes your data and your models are assumed to follow.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Distinguish a <strong>PMF</strong> (discrete) from a <strong>PDF</strong> (continuous), and know what a CDF is.</li>
+    <li>Use the <strong>Bernoulli</strong> and <strong>binomial</strong> distributions for yes/no events and counts.</li>
+    <li>Read the <strong>Gaussian</strong> from its two parameters $\mu$ (center) and $\sigma$ (spread), and the 68–95–99.7 rule.</li>
+    <li>Interpret the <strong>multivariate Gaussian</strong> via its mean vector and <strong>covariance matrix</strong>.</li>
+    <li>Connect distributions to model outputs (sigmoid/softmax) and assumptions (Gaussian noise).</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§6.2 Discrete &amp; Continuous Probabilities, §6.5 Gaussian Distribution</span> (Chapter 6).</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Random variables & PMF/PDF</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Bernoulli & binomial</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">The Gaussian</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Multivariate Gaussian</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$X$</span><span class="def">A random variable — maps outcomes to numbers.</span>
+    <span class="sym">PMF / PDF</span><span class="def">Probability mass (discrete) / density (continuous) function.</span>
+    <span class="sym">$\mu,\ \sigma$</span><span class="def">Mean (center) and standard deviation (spread).</span>
+    <span class="sym">$\mathcal{N}(\mu,\sigma^2)$</span><span class="def">A Gaussian (normal) distribution.</span>
+    <span class="sym">$\Sigma$</span><span class="def">Covariance matrix — spread &amp; correlation of a multivariate Gaussian.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Random variables &amp; how probability spreads <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.2</a></h2>
+
+<p>A <strong>random variable</strong> $X$ attaches a number to each outcome (heads→1, tails→0; a person→their height). Its <strong>distribution</strong> says how likely each value is. Two flavours:</p>
+<ul>
+  <li><strong>Discrete</strong> — countable values (0,1,2,…). Described by a <strong>PMF</strong> $P(X=x)$; the masses sum to 1.</li>
+  <li><strong>Continuous</strong> — a real range. Described by a <strong>PDF</strong> $p(x)$, where <em>areas</em> (not heights) are probabilities: $P(a\le X\le b)=\int_a^b p(x)\,dx$, and the total area is 1.</li>
+</ul>
+<p>A key subtlety: for a continuous variable, $P(X=\text{exactly } x)=0$ — only ranges have probability. The <strong>CDF</strong> $F(x)=P(X\le x)$ works for both and is what you use for percentiles.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+A PMF is a normalized bar chart — <code>GROUP BY value, COUNT(*)/total</code>. A PDF is what that histogram becomes as bins shrink and rows grow: a smooth curve where the <em>area</em> of a slice is the fraction of data in that range. You've drawn distributions in every dashboard; this just names their shapes.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The discrete workhorses: Bernoulli &amp; binomial</h2>
+
+<p><strong>Bernoulli($p$)</strong> — a single yes/no trial: $P(X=1)=p$, $P(X=0)=1-p$. One coin flip, one click/no-click, one spam/not-spam. It's the distribution behind every binary classifier's output.</p>
+
+<p><strong>Binomial($n,p$)</strong> — the number of successes in $n$ independent Bernoulli trials: $P(X=k)=\binom{n}{k}p^k(1-p)^{n-k}$. How many heads in 10 flips, how many conversions in 100 visits. Its mean is $np$.</p>
+
+<div class="callout c-good"><span class="tag">Also worth knowing</span>
+<b>Categorical</b> (one roll of a $k$-sided die) generalizes Bernoulli to many classes — it's what a <b>softmax</b> layer outputs. <b>Poisson</b> models counts of rare events per interval (arrivals, defects). But the one you must know cold is next.</div>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>The Gaussian — the bell curve that runs ML <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.5</a></h2>
+
+<p>The <strong>Gaussian</strong> (normal) distribution $\mathcal{N}(\mu,\sigma^2)$ is the famous bell curve, defined by just two numbers — its center $\mu$ and its spread $\sigma$:</p>
+
+<div class="mathband">$$ p(x) = \frac{1}{\sigma\sqrt{2\pi}}\,\exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right) $$</div>
+
+<p>Slide $\mu$ and $\sigma$ below. $\mu$ shifts the peak; $\sigma$ widens or narrows it (area always stays 1, so wider means shorter). The famous <strong>68–95–99.7 rule</strong>: about 68% of the mass lies within $1\sigma$ of the mean, 95% within $2\sigma$, 99.7% within $3\sigma$.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="normplay" width="880" height="400"></canvas>
+    <div class="ctrlrow"><span class="lbl2">mean μ:</span>
+      <input type="range" id="sMu" min="-3" max="3" step="0.1" value="0" style="flex:1;accent-color:var(--accent);max-width:280px;"><span id="rMu" class="vd">0.0</span></div>
+    <div class="ctrlrow"><span class="lbl2">std dev σ:</span>
+      <input type="range" id="sSig" min="0.5" max="2.5" step="0.05" value="1" style="flex:1;accent-color:var(--accent);max-width:280px;"><span id="rSig" class="vd">1.00</span></div>
+    <div class="readout">
+      <span><span class="k">within 1σ</span> <span class="va">68%</span></span>
+      <span><span class="k">within 2σ</span> <span class="vb">95%</span></span>
+      <span><span class="k">within 3σ</span> <span class="vs">99.7%</span></span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — The Gaussian $\mathcal{N}(\mu,\sigma^2)$.</strong> The shaded bands are $\pm1\sigma$ (darkest, 68%), $\pm2\sigma$ (95%), $\pm3\sigma$ (99.7%). Move $\mu$ to slide the bell; move $\sigma$ to widen it — notice it gets <em>shorter</em> as it widens, because the total area is always 1. Setting $\mu=0,\sigma=1$ gives the <b>standard normal</b>, the reference every Gaussian rescales to.</figcaption>
+</figure>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>The multivariate Gaussian <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.5</a></h2>
+
+<p>In many dimensions, the Gaussian is described by a <strong>mean vector</strong> $\boldsymbol{\mu}$ (the center) and a <strong>covariance matrix</strong> $\Sigma$ (the spread and correlations). Its contours of equal density are <strong>ellipses</strong> (ellipsoids in higher dimensions):</p>
+
+<div class="mathband">$$ p(\mathbf{x}) \propto \exp\!\left(-\tfrac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \Sigma^{-1}(\mathbf{x}-\boldsymbol{\mu})\right) $$</div>
+
+<ul>
+  <li><strong>Diagonal $\Sigma$</strong> → the ellipse's axes align with the coordinate axes (features uncorrelated).</li>
+  <li><strong>Off-diagonal terms</strong> → correlation, which <em>tilts</em> the ellipse.</li>
+  <li><strong>Equal diagonal, zero off-diagonal</strong> → a perfect circle (isotropic).</li>
+</ul>
+
+<details class="deeper"><summary>Going deeper — the covariance matrix <em>is</em> Sessions 6–7</summary><div class="deep-body">
+  <p>$\Sigma$ is symmetric and positive-semidefinite, so by the spectral theorem (Session 6) it has real eigenvalues and orthogonal eigenvectors. Those <strong>eigenvectors are the axes of the density ellipse</strong>, and the <strong>eigenvalues are the variances along them</strong> (axis lengths go as $\sqrt{\lambda}$). That's the same object PCA diagonalizes — PCA (Session 7) literally finds the axes of the data's Gaussian-shaped cloud. So the multivariate Gaussian, PCA, and the SVD are three views of one picture: a cloud, its ellipse, and the ellipse's axes. <span class="secs">See <b>MML §6.5</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+coins = np.random.binomial(n=<span class="n">10</span>, p=<span class="n">0.5</span>, size=<span class="n">5</span>)          <span class="c"># heads in 10 flips, 5 times</span>
+data  = np.random.normal(loc=<span class="n">2.0</span>, scale=<span class="n">0.5</span>, size=<span class="n">1000</span>)  <span class="c"># N(mu=2, sigma=0.5)</span>
+<span class="f">print</span>(coins)                                       <span class="c"># e.g. [4 5 6 5 7]</span>
+<span class="f">print</span>(<span class="f">round</span>(data.mean(),<span class="n">2</span>), <span class="f">round</span>(data.std(),<span class="n">2</span>))          <span class="c"># ~2.0 ~0.5</span>
+
+<span class="k">def</span> <span class="f">normal_pdf</span>(x, mu=<span class="n">0</span>, sig=<span class="n">1</span>):                     <span class="c"># the PDF by hand, no scipy</span>
+    <span class="k">return</span> np.exp(-(x-mu)**<span class="n">2</span>/(<span class="n">2</span>*sig**<span class="n">2</span>)) / (sig*np.sqrt(<span class="n">2</span>*np.pi))
+<span class="f">print</span>(<span class="f">round</span>(<span class="f">normal_pdf</span>(<span class="n">0</span>), <span class="n">4</span>))                       <span class="c"># 0.3989  peak of standard normal</span>
+
+<span class="f">print</span>(np.mean(np.abs(data-data.mean()) &lt; data.std()))  <span class="c"># ~0.68  (68% within 1σ)</span></pre>
+<div class="out">[4 5 6 5 7]
+2.0 0.5
+0.3989
+0.684</div>
+
+<div class="callout c-warn"><span class="tag">Density is not probability</span>
+A PDF value can exceed 1 (a narrow Gaussian has a tall peak) — it's a <em>density</em>, not a probability. Only the <em>area</em> under it (an integral, or <code>np.mean(mask)</code> over samples) is a probability. Confusing height with probability is a classic slip.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Model outputs are distributions.</strong> A <strong>sigmoid</strong> output is a Bernoulli parameter (P of class 1); a <strong>softmax</strong> output is a categorical distribution over classes. Classification predicts a distribution, not a label.</li>
+  <li><strong>Gaussian assumptions everywhere.</strong> Linear regression assumes Gaussian noise; GMMs model data as a mix of Gaussians; Gaussian processes, VAEs, and diffusion models are built on it; weight initialization samples Gaussians.</li>
+  <li><strong>The covariance matrix</strong> drives PCA, whitening, Mahalanobis distance, and anomaly detection.</li>
+  <li><strong>Likelihoods</strong> from these PDFs/PMFs are what MLE maximizes (Session 17), and their logs give the loss functions (MSE ← Gaussian, cross-entropy ← Bernoulli/categorical).</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+A distribution is how probability spreads over values. Bernoulli/categorical describe classifier outputs; the Gaussian (two numbers: center and spread) describes noise and data clouds, and its covariance matrix is the PCA/SVD ellipse. Nearly every loss function is the log-likelihood of one of these.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>PDF ≠ probability:</strong> density can be &gt; 1; only areas (integrals) are probabilities.</li>
+  <li><strong>$P(X=x)=0$</strong> for a continuous variable — ask about ranges, not exact values.</li>
+  <li><strong>σ vs σ²:</strong> $\mathcal{N}(\mu,\sigma^2)$ is parameterized by variance; NumPy's <code>scale</code> is the std dev $\sigma$. Mixing them up is common.</li>
+  <li><strong>Not everything is Gaussian:</strong> heavy tails, skew, and multimodality break the assumption — check before assuming (histogram / QQ plot).</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Discrete → <strong>PMF</strong> (masses sum to 1); continuous → <strong>PDF</strong> (area = 1, area = probability).</li>
+  <li><strong>Bernoulli</strong> = one yes/no; <strong>binomial</strong> = successes in $n$ trials (mean $np$).</li>
+  <li>The <strong>Gaussian</strong> is set by $\mu$ (center) and $\sigma$ (spread): 68–95–99.7 within 1/2/3σ.</li>
+  <li><strong>Multivariate Gaussian</strong>: mean vector + covariance matrix; contours are ellipses whose axes are $\Sigma$'s eigenvectors.</li>
+  <li>Softmax → categorical, sigmoid → Bernoulli; losses are their (negative log) likelihoods.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Treating density as probability</span>
+A tall PDF peak doesn't mean "&gt;100% chance." Integrate over a range for a probability; the height alone is meaningless without a width.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · σ vs σ² and the scale argument</span>
+Variance is $\sigma^2$; std dev is $\sigma$. <code>np.random.normal(scale=σ)</code> takes the std dev — passing a variance makes your spread wrong by a square.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Assuming normality blindly</span>
+Real features are often skewed or heavy-tailed. Gaussian-based methods (z-scores, many tests) mislead on such data — inspect the distribution first.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">Roughly what fraction of a Gaussian's mass lies within 2 standard deviations of the mean?</div>
+  <button class="opt">About 68%.</button>
+  <button class="opt">About 95%.</button>
+  <button class="opt">About 99.7%.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">A softmax layer's output is best described as which distribution?</div>
+  <button class="opt">A single Gaussian.</button>
+  <button class="opt">A binomial.</button>
+  <button class="opt">A categorical distribution over the classes.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Sample 10,000 draws from $\mathcal{N}(5,2^2)$ and check the sample mean and std match 5 and 2.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">d=np.random.normal(<span class="n">5</span>,<span class="n">2</span>,<span class="n">10000</span>)
+d.mean(), d.std()   <span class="c"># ~5.0, ~2.0</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Verify the 68–95–99.7 rule empirically on standard-normal samples.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">d=np.random.normal(<span class="n">0</span>,<span class="n">1</span>,<span class="n">100000</span>)
+[np.mean(np.abs(d)&lt;k) <span class="k">for</span> k <span class="k">in</span> (<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>)]   <span class="c"># ~[0.68, 0.95, 0.997]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Binomial: simulate 10,000 experiments of 20 coin flips ($p=0.5$). What's the mean number of heads, and does it match $np$?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">k=np.random.binomial(<span class="n">20</span>,<span class="n">0.5</span>,<span class="n">10000</span>)
+k.mean()   <span class="c"># ~10.0 == n*p = 20*0.5</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Write <code>normal_pdf(x, mu, sig)</code> and confirm the peak at $x=\mu$ equals $1/(\sigma\sqrt{2\pi})$.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">pdf=<span class="k">lambda</span> x,mu,s: np.exp(-(x-mu)**<span class="n">2</span>/(<span class="n">2</span>*s*s))/(s*np.sqrt(<span class="n">2</span>*np.pi))
+pdf(<span class="n">2</span>,<span class="n">2</span>,<span class="n">0.5</span>), <span class="n">1</span>/(<span class="n">0.5</span>*np.sqrt(<span class="n">2</span>*np.pi))   <span class="c"># equal, ~0.798</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Sample a 2-D Gaussian with correlation (e.g. $\Sigma=[[1,0.8],[0.8,1]]$) via <code>np.random.multivariate_normal</code>, then recover $\Sigma$ from the samples with <code>np.cov</code>. Do the eigenvectors of $\Sigma$ point along the cloud's spread?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">S=np.array([[<span class="n">1</span>,<span class="n">0.8</span>],[<span class="n">0.8</span>,<span class="n">1</span>]])
+X=np.random.multivariate_normal([<span class="n">0</span>,<span class="n">0</span>], S, <span class="n">5000</span>)
+np.cov(X.T).round(<span class="n">2</span>)                 <span class="c"># ~[[1,0.8],[0.8,1]]</span>
+np.linalg.eigh(np.cov(X.T))[<span class="n">1</span>]        <span class="c"># eigenvectors ~ [1,1]/√2 and [1,-1]/√2</span></pre>
+    <p>The top eigenvector points along $[1,1]$ — the direction of the correlated cloud's greatest spread. That's PCA finding the Gaussian's major axis (Session 7).</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · PMF vs PDF?</div><div class="a">PMF gives probabilities of discrete values (they sum to 1). PDF gives densities for continuous variables — probabilities are areas under it (integrals), and the total area is 1; a single point has probability 0.</div></div>
+<div class="qa"><div class="q">Q2 · What two parameters define a Gaussian, and what's the 68–95–99.7 rule?</div><div class="a">Mean $\mu$ (center) and standard deviation $\sigma$ (spread). ~68% of mass within 1σ, ~95% within 2σ, ~99.7% within 3σ.</div></div>
+<div class="qa"><div class="q">Q3 · What does the covariance matrix of a multivariate Gaussian encode?</div><div class="a">Per-feature variances (diagonal) and pairwise correlations (off-diagonal). Its eigenvectors are the axes of the density ellipse and its eigenvalues the variances along them — the PCA directions.</div></div>
+<div class="qa"><div class="q">Q4 · Which distributions do sigmoid and softmax outputs correspond to?</div><div class="a">Sigmoid → Bernoulli (probability of the positive class); softmax → categorical (a probability over multiple classes).</div></div>
+<div class="qa"><div class="q">Q5 · Why is the Gaussian so common in ML?</div><div class="a">The CLT makes sums/averages Gaussian (Session 15), it's the max-entropy distribution for a given mean/variance, it's mathematically convenient (closed-form, conjugate), and it models noise well — so many methods assume it.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>PMF / PDF / CDF</td><td>How data & outputs are modelled</td><td class="freq f-h">High</td></tr>
+  <tr><td>Bernoulli / binomial</td><td>Binary outcomes; classifier outputs</td><td class="freq f-h">High</td></tr>
+  <tr><td>Gaussian (μ, σ)</td><td>Noise, init, GMMs, VAEs, diffusion</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>68–95–99.7 rule</td><td>Quick reasoning about spread/outliers</td><td class="freq f-h">High</td></tr>
+  <tr><td>Multivariate Gaussian / Σ</td><td>PCA, whitening, anomaly detection</td><td class="freq f-h">High</td></tr>
+  <tr><td>softmax→categorical, sigmoid→Bernoulli</td><td>Model outputs; loss functions</td><td class="freq f-vh">Very high</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../14_expectation_covariance/theory.html" style="border:0;color:inherit">14 · Expectation, variance & covariance →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Distributions have summary numbers: the expectation (mean), variance (spread), and covariance (how variables move together) — plus the covariance matrix that ties straight back to PCA.</p>
+</div>

@@ -19,7 +19,7 @@ window.MFML_SESSIONS = [
   ["calc","10","10_chain_rule_backprop","Chain rule & backprop","How gradients flow backward through a neural network.",true],
   ["calc","11","11_gradient_descent","Gradient descent","The optimization loop at the heart of training (plus convexity & Lagrange).",true],
   ["prob","12","12_probability_bayes","Probability & Bayes","Reasoning under uncertainty; updating beliefs with evidence.",true],
-  ["prob","13","13_distributions","Distributions","Normal, Bernoulli, and the multivariate Gaussian.",false],
+  ["prob","13","13_distributions","Distributions","Normal, Bernoulli, and the multivariate Gaussian.",true],
   ["prob","14","14_expectation_covariance","Expectation, variance & covariance","Summarizing randomness; the covariance matrix.",false],
   ["prob","15","15_sampling_clt","Sampling & the CLT","Why averages are well-behaved even when data isn't.",false],
   ["prob","16","16_inference","Inference & hypothesis testing","Confidence intervals, p-values, and A/B tests.",false],
