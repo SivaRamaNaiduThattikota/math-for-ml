@@ -50,7 +50,15 @@ SESSIONS = [
               ("s5","5 · What makes it linear"),("s6","6 · Determinant"),
               ("s7","7 · NumPy & ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    # Sessions 04–18 get appended here as each _content.html is authored.
+    dict(num="04", slug="04_matrix_multiplication", title="Matrix multiplication",
+         lede="Multiplying two matrices means doing one transformation after another. The "
+              "row-times-column rule is just the bookkeeping of composition.",
+         meta=["~20 min read", "NumPy paired notebook", "Prereq: Matrices, Dot product"],
+         toc=[("s1","1 · Multiplication = composition"),("s2","2 · The row·column rule"),
+              ("s3","3 · Order matters"),("s4","4 · Shapes & associativity"),
+              ("s5","5 · NumPy"),("s6","6 · Inside ML"),("ref","Rules & traps"),
+              ("exercises","Exercises"),("interview","Interview"),("summary","Summary")]),
+    # Sessions 05–18 get appended here as each _content.html is authored.
 ]
 
 GROUP = {  # eyebrow label per session range

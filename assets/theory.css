@@ -434,3 +434,11 @@
   header.hero h1{ background:var(--grad); -webkit-background-clip:text; background-clip:text;
     -webkit-text-fill-color:transparent; color:transparent; }
   #progress{ background:var(--grad) !important; }
+
+  /* ═══════════ interactive control buttons (reusable) ═══════════ */
+  .ctrlrow{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:.8rem;}
+  .ctrlrow .lbl2{color:var(--muted); margin-right:2px;}
+  .ctrl{background:var(--card); border:1px solid var(--rule-strong); border-radius:8px; padding:6px 12px; cursor:pointer;
+    font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--ink);}
+  .ctrl:hover{border-color:var(--accent);}
+  .ctrl.active{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600;}

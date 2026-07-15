@@ -211,6 +211,7 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 01 — Vectors** (full 9-beat, interactive playground, MML §2.4/3.1/3.3 + norm-axioms deep-dive).
 - ✅ **Session 02 — Dot product & similarity** (projection playground + 360° sweep, MML §3.2–3.4/3.8 + law-of-cosines & Cauchy–Schwarz deep-dives).
 - ✅ **Session 03 — Matrices as transformations** (drag-the-basis transformation visualizer, MML §2.2/2.7/4.1 + linearity & det=0 deep-dives).
+- ✅ **Session 04 — Matrix multiplication** (compose-two-transformations visualizer with order swap + play, MML §2.2/2.7 + row×col-is-composition & associativity deep-dives).
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 - ◻ Sessions 03–16 — authored one at a time against this spec (each with its MML mapping).

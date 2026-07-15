@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Matrix multiplication · Math for ML</title>
+<meta name="description" content="Multiplying two matrices means doing one transformation after another. The row-times-column rule is just the bookkeeping of composition.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Matrix multiplication · Math for ML">
+<meta property="og:description" content="Multiplying two matrices means doing one transformation after another. The row-times-column rule is just the bookkeeping of composition.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="04_matrix_multiplication">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · Multiplication = composition</a>
+  <a href="#s2">2 · The row·column rule</a>
+  <a href="#s3">3 · Order matters</a>
+  <a href="#s4">4 · Shapes & associativity</a>
+  <a href="#s5">5 · NumPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Linear Algebra · 04</div>
+    <h1>Matrix multiplication</h1>
+    <p class="lede">Multiplying two matrices means doing one transformation after another. The row-times-column rule is just the bookkeeping of composition.</p>
+    <div class="meta"><span>~20 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: Matrices, Dot product</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">You now know a matrix is a transformation of space (Session 3). So here's the question that makes matrix multiplication obvious instead of arbitrary: <strong>if a matrix is a transformation, what is multiplying two of them?</strong> The answer is beautifully simple — <em>do one transformation, then the other</em>. Matrix multiplication is <strong>composition</strong>. The infamous "row-times-column" rule isn't a definition to memorize; it's the bookkeeping that falls out of "apply B, then apply A."</p>
+
+<p>This is the operation a GPU spends almost all its time on. A neural network's forward pass is a chain of matrix multiplications; attention is matrix multiplications; a batch of 10,000 predictions is one matrix multiplication. Understand it as composition and the rest of deep learning is reading.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Read $AB$ as <strong>composition</strong> — "do $B$ first, then $A$" — not just a number-crunching rule.</li>
+    <li>Compute a product two ways: entry-by-entry as <strong>row · column</strong> dot products, and column-by-column.</li>
+    <li>Explain why matrix multiplication is <strong>not commutative</strong> ($AB \ne BA$) but <em>is</em> associative.</li>
+    <li>Apply the <strong>shape rule</strong> $(m\times n)(n\times p) = m\times p$ and spot invalid products instantly.</li>
+    <li>See a neural-network forward pass and attention as chains of matrix products.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§2.2 Matrices (multiplication) &amp; §2.7 Linear Mappings (composition)</span>. We build the "composition" intuition; those sections give the formal rule and its properties.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Multiplication = composition</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">The row · column rule</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Order matters</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Shapes, identity, associativity</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$AB$</span><span class="def">Matrix product — apply <b>B</b> first, then <b>A</b> (right-to-left).</span>
+    <span class="sym">$(AB)_{ij}$</span><span class="def">Entry in row <em>i</em>, col <em>j</em> = (row <em>i</em> of A) · (col <em>j</em> of B).</span>
+    <span class="sym">$m\times n$</span><span class="def">A matrix with <em>m</em> rows, <em>n</em> columns; maps $\mathbb{R}^n\to\mathbb{R}^m$.</span>
+    <span class="sym">$I$</span><span class="def">Identity matrix: $AI = IA = A$ (the "do nothing" transform).</span>
+    <span class="sym">$A^\top$</span><span class="def">Transpose — rows become columns (appears in attention as $QK^\top$).</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Multiplication is composition <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §2.7</a></h2>
+
+<p>Take two transformations: $B$ (say, a shear) and $A$ (say, a rotation). Apply $B$ to a vector, then apply $A$ to the result: $A(B\mathbf{x})$. Because both are linear, the <em>combined</em> operation is itself a single linear transformation — and the matrix that performs it in one step is written $AB$:</p>
+
+<div class="mathband">$$ A(B\mathbf{x}) = (AB)\,\mathbf{x} $$</div>
+
+<p>Read $AB$ <strong>right-to-left</strong>: the matrix nearest the vector acts first. This ordering feels backwards at first, but it's forced by the notation $A(B\mathbf{x})$ — $B$ touches $\mathbf{x}$ first. It's the same reason $f(g(x))$ means "$g$ first."</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Think of a Power Query pipeline: "remove columns → then group → then sort." Each step transforms the table; the pipeline is their <em>composition</em>. Matrix multiplication is exactly that for linear transformations — <code>AB</code> is a two-step pipeline collapsed into one reusable transformation. And just like query steps, <strong>order changes the result</strong>.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>The row · column rule — and why it's that <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §2.2</a></h2>
+
+<p>To compute the product, each entry of $AB$ is a <strong>dot product of a row of $A$ with a column of $B$</strong> — Session 2 returning with a job:</p>
+
+<div class="mathband">$$ (AB)_{ij} = (\text{row } i \text{ of } A)\cdot(\text{column } j \text{ of } B) = \sum_k A_{ik}B_{kj} $$</div>
+
+<p>A concrete 2×2:</p>
+<div class="mathband">$$ \begin{bmatrix}1&2\\0&1\end{bmatrix}\begin{bmatrix}2&0\\1&3\end{bmatrix} = \begin{bmatrix} 1\cdot2+2\cdot1 & 1\cdot0+2\cdot3 \\ 0\cdot2+1\cdot1 & 0\cdot0+1\cdot3 \end{bmatrix} = \begin{bmatrix}4&6\\1&3\end{bmatrix} $$</div>
+
+<aside class="side"><span class="lbl">Column view</span>There's a cleaner way to see it: <b>column j of AB is A applied to column j of B</b>. B says where the basis vectors go; A then transforms <em>those</em> landing spots. Composition, column by column.</aside>
+
+<details class="deeper"><summary>Going deeper — why "row × column" is the same as composition</summary><div class="deep-body">
+  <p>Column $j$ of $AB$ is, by definition, $(AB)$ applied to the basis vector $\mathbf{e}_j$. But $(AB)\mathbf{e}_j = A(B\mathbf{e}_j)$, and $B\mathbf{e}_j$ is just <strong>column $j$ of $B$</strong> (Session 3: columns are basis images). So column $j$ of $AB$ = $A$ times column $j$ of $B$. Working that out entry-by-entry — each output entry is a row of $A$ dotted with that column of $B$ — <em>is</em> the row×column rule. The rule isn't arbitrary; it's the only bookkeeping consistent with "apply B, then A." <span class="secs">See <b>MML §2.2–2.7</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Order matters: $AB \ne BA$</h2>
+
+<p>Since $AB$ means "B then A" and $BA$ means "A then B," they're generally different transformations — matrix multiplication is <strong>not commutative</strong>. Rotating a shape and then shearing it lands somewhere different from shearing then rotating. Drag through it below.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="cplay" width="880" height="440"></canvas>
+    <div class="ctrlrow"><span class="lbl2">First (B):</span>
+      <button class="ctrl" data-slot="B" data-key="rot">Rotate 90°</button>
+      <button class="ctrl" data-slot="B" data-key="shear">Shear</button>
+      <button class="ctrl" data-slot="B" data-key="scale">Scale 1.5×</button>
+      <button class="ctrl" data-slot="B" data-key="reflect">Reflect</button>
+    </div>
+    <div class="ctrlrow"><span class="lbl2">Then (A):</span>
+      <button class="ctrl" data-slot="A" data-key="rot">Rotate 90°</button>
+      <button class="ctrl" data-slot="A" data-key="shear">Shear</button>
+      <button class="ctrl" data-slot="A" data-key="scale">Scale 1.5×</button>
+      <button class="ctrl" data-slot="A" data-key="reflect">Reflect</button>
+    </div>
+    <div class="readout">
+      <span><span class="k">AB</span> = <span class="vd" id="rProd">…</span></span>
+      <span><span class="k">commute?</span> <span class="vs" id="rComm">…</span></span>
+    </div>
+    <button class="btn-anim" id="playBtn">▶ Play: apply B, then A</button>
+  </div>
+  <figcaption><strong>Figure 1 — Composition, and why order matters.</strong> Pick a "first" transformation (B) and a "then" (A). The dashed square is the original; the solid one is $AB$ applied. Hit <b>Play</b> to watch it happen in two steps. Now swap your two choices between the rows — the result usually changes, and the "commute?" flag turns red. (Try Rotate-then-Shear vs Shear-then-Rotate.)</figcaption>
+</figure>
+
+<div class="callout c-why"><span class="tag">Why it matters</span>
+Non-commutativity is not a nuisance — it's <em>information</em>. The order of layers in a neural network matters; the order of transformations in a graphics pipeline matters. "Which happens first" is a real modelling choice, and the algebra respects it.</div>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>Shapes, the identity, and associativity</h2>
+
+<p><strong>The shape rule.</strong> You can multiply $A\,(m\times n)$ by $B\,(p\times q)$ only when the <em>inner</em> dimensions match — $n = p$ — and the result is $m\times q$:</p>
+<div class="mathband">$$ (m\times \underbrace{n)\,(n}_{\text{must match}}\times q) \;=\; m\times q $$</div>
+<p>This is just the composition rule in disguise: $B$ outputs vectors in $\mathbb{R}^p$, and $A$ must accept inputs from $\mathbb{R}^n$ — so $n=p$ or the pipeline doesn't connect. It's also why $AB$ can be valid while $BA$ is undefined (shapes don't line up the other way).</p>
+
+<p><strong>Identity.</strong> The identity matrix $I$ (1s on the diagonal, 0s elsewhere) is the "do nothing" transformation: $AI = IA = A$.</p>
+
+<p><strong>Associativity.</strong> Grouping doesn't matter — $A(BC) = (AB)C$ — because both mean "do C, then B, then A." This is quietly essential: it's why you can <em>precompute</em> $AB$ once and reuse it, and why a deep network's layers can be reasoned about in chunks.</p>
+
+<details class="deeper"><summary>Going deeper — associative but not commutative</summary><div class="deep-body">
+  <p>These two properties are easy to confuse. <strong>Associative</strong> ($A(BC)=(AB)C$) is about <em>grouping</em> — it always holds, because the <em>sequence</em> of operations is unchanged. <strong>Commutative</strong> ($AB=BA$) is about <em>reordering</em> — it generally fails, because swapping changes which transformation happens first. Function composition is the same: $f\circ(g\circ h) = (f\circ g)\circ h$ always, but $f\circ g \ne g\circ f$ in general. <span class="secs">See <b>MML §2.2</b>.</span></p>
+</div></details>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy</h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+A = np.array([[<span class="n">1</span>, <span class="n">2</span>], [<span class="n">0</span>, <span class="n">1</span>]], dtype=<span class="k">float</span>)
+B = np.array([[<span class="n">2</span>, <span class="n">0</span>], [<span class="n">1</span>, <span class="n">3</span>]], dtype=<span class="k">float</span>)
+
+<span class="f">print</span>(A &#64; B)                    <span class="c"># [[4. 6.] [1. 3.]]  "B then A"</span>
+<span class="f">print</span>(B &#64; A)                    <span class="c"># [[2. 4.] [1. 5.]]  different! not commutative</span>
+<span class="f">print</span>(np.allclose(A&#64;B, B&#64;A))    <span class="c"># False</span>
+
+<span class="c"># shape rule: (2x3)(3x4) -> (2x4); inner dims must match</span>
+M = np.random.rand(<span class="n">2</span>, <span class="n">3</span>); N = np.random.rand(<span class="n">3</span>, <span class="n">4</span>)
+<span class="f">print</span>((M &#64; N).shape)            <span class="c"># (2, 4)</span></pre>
+<div class="out">[[4. 6.]
+ [1. 3.]]
+[[2. 4.]
+ [1. 5.]]
+False
+(2, 4)</div>
+
+<div class="callout c-warn"><span class="tag">Use @ (or np.matmul), never *</span>
+In NumPy, <code>*</code> is <em>element-wise</em> multiplication (the Hadamard product), <strong>not</strong> matrix multiplication. Using <code>*</code> when you meant <code>@</code> is one of the most common — and silent, when shapes happen to broadcast — bugs in ML code. Matrix product is always <code>@</code> or <code>np.matmul</code>.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>A neural-network forward pass</strong> is a chain of matrix products: $\mathbf{h} = f_2(W_2\,f_1(W_1\mathbf{x}))$. Stacking layers = composing transformations, exactly this session.</li>
+  <li><strong>Batching</strong> — instead of one input vector, pass a matrix $X$ whose rows are 10,000 examples; $XW^\top$ scores them <em>all at once</em>. One matmul = a whole batch. This is why GPUs (matrix-multiply machines) dominate ML.</li>
+  <li><strong>Attention</strong> — the relevance scores are $QK^\top$ (a matrix product of queries and keys), and the output multiplies those weights by $V$: two big matmuls per attention layer.</li>
+  <li><strong>PCA / whitening / projections</strong> — chaining a rotation and a scaling is a single product you precompute once (associativity earning its keep).</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Session 3: a matrix transforms space. Session 4: multiplying matrices <em>composes</em> those transformations. A deep network is just a long, learned composition — and the whole thing runs as matrix multiplications.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Right-to-left:</strong> $AB\mathbf{x}$ applies $B$ first. The matrix closest to the vector acts first.</li>
+  <li><strong>Inner dimensions must match:</strong> $(m\times n)(n\times p)$ works; anything else is undefined.</li>
+  <li><strong>$AB$ valid ≠ $BA$ valid:</strong> a $2\times3$ times a $3\times2$ gives $2\times2$; the reverse gives $3\times3$ — different, and sometimes only one direction is even legal.</li>
+  <li><strong>$(AB)^\top = B^\top A^\top$</strong> — transposing a product reverses the order (a frequent source of shape bugs).</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Matrix multiplication is <strong>composition</strong>: $AB$ = "do B, then A."</li>
+  <li>Entry $(i,j)$ = <strong>row $i$ of A · column $j$ of B</strong>; equivalently, column $j$ of $AB$ = $A$ · (column $j$ of B).</li>
+  <li><strong>Not commutative</strong> ($AB\ne BA$) but <strong>associative</strong> ($A(BC)=(AB)C$).</li>
+  <li>Shape: $(m\times n)(n\times p) = m\times p$ — <strong>inner dims must match</strong>.</li>
+  <li>In code, matrix product is <strong><code>@</code></strong>; <code>*</code> is element-wise (a different operation).</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · `*` vs `@`</span>
+<code>A * B</code> multiplies element-wise; <code>A @ B</code> is the matrix product. If shapes let both run, you'll get a wrong answer with no error. Always <code>@</code> for composition.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Assuming AB = BA</span>
+Reordering matrices silently changes the transformation. In backprop and attention, keeping the multiplication order (and transposes) correct is most of the battle.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Transpose of a product</span>
+$(AB)^\top = B^\top A^\top$, not $A^\top B^\top$. Forgetting to reverse the order breaks shapes in gradient derivations.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">In the product <code>ABx</code>, which transformation is applied to <code>x</code> first?</div>
+  <button class="opt">A, because it's written first.</button>
+  <button class="opt">B, because it's closest to x (right-to-left).</button>
+  <button class="opt">They're applied simultaneously.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">You have a (3×2) matrix and a (2×5) matrix. Which product is valid, and what's its shape?</div>
+  <button class="opt">(2×5)(3×2) → (2×2)</button>
+  <button class="opt">Only (3×2)(2×5) → (3×5); inner dims (2) match</button>
+  <button class="opt">Both are valid and equal</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>, computing each by hand first.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Multiply $\begin{bmatrix}1&2\\3&4\end{bmatrix}\begin{bmatrix}0&1\\1&0\end{bmatrix}$ by hand, then verify. What did the right-hand matrix <em>do</em>?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$\begin{bmatrix}2&1\\4&3\end{bmatrix}$. The right matrix $\begin{bmatrix}0&1\\1&0\end{bmatrix}$ <strong>swaps the columns</strong> (it's a swap/permutation applied first).</p>
+    <pre class="code">np.array([[<span class="n">1</span>,<span class="n">2</span>],[<span class="n">3</span>,<span class="n">4</span>]]) &#64; np.array([[<span class="n">0</span>,<span class="n">1</span>],[<span class="n">1</span>,<span class="n">0</span>]])  <span class="c"># [[2 1] [4 3]]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>For $A=\begin{bmatrix}2&0\\0&1\end{bmatrix}$, $B=\begin{bmatrix}1&1\\0&1\end{bmatrix}$, compute both $AB$ and $BA$ and confirm they differ.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>$AB=\begin{bmatrix}2&2\\0&1\end{bmatrix}$, $BA=\begin{bmatrix}2&1\\0&1\end{bmatrix}$ — different, so order matters.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Which of these products are valid, and what shapes? (a) (4×3)(3×2), (b) (3×2)(3×2), (c) (1×5)(5×1), (d) (5×1)(1×5).</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>(a) valid → 4×2. (b) <strong>invalid</strong> (inner 2≠3). (c) valid → 1×1 (a scalar = a dot product!). (d) valid → 5×5 (an outer product). Note (c) and (d) use the <em>same</em> vectors, opposite order, wildly different results.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Verify associativity: pick random 2×2 matrices $A,B,C$ and check $A(BC) = (AB)C$ with <code>np.allclose</code>.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">A,B,C = (np.random.rand(<span class="n">2</span>,<span class="n">2</span>) <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">3</span>))
+np.allclose(A &#64; (B &#64; C), (A &#64; B) &#64; C)   <span class="c"># True</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>A rotation by 90° is $R=\begin{bmatrix}0&-1\\1&0\end{bmatrix}$. Compute $R^4$ (apply it four times). Explain the result geometrically.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">R = np.array([[<span class="n">0</span>,<span class="n">-1</span>],[<span class="n">1</span>,<span class="n">0</span>]])
+np.linalg.matrix_power(R, <span class="n">4</span>)   <span class="c"># [[1 0] [0 1]] == I</span></pre>
+    <p>Four 90° rotations = 360° = back to start, so $R^4 = I$. Composing a transformation with itself is just repeated multiplication — the seed of matrix powers and, later, eigenvalues (Session 6).</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What does multiplying two matrices represent?</div><div class="a">Composition of their transformations: $AB$ means apply $B$ first, then $A$. Each entry is a dot product of a row of A with a column of B.</div></div>
+<div class="qa"><div class="q">Q2 · Is matrix multiplication commutative? Associative?</div><div class="a">Not commutative ($AB\ne BA$ in general — order changes which transform acts first) but associative ($A(BC)=(AB)C$ — grouping doesn't change the sequence).</div></div>
+<div class="qa"><div class="q">Q3 · State the shape rule.</div><div class="a">$(m\times n)(n\times p) = m\times p$; the inner dimensions must match. It's the composition rule: B's output space must equal A's input space.</div></div>
+<div class="qa"><div class="q">Q4 · How does a neural network use matrix multiplication?</div><div class="a">Each layer computes $W\mathbf{x}$ (or $XW^\top$ for a batch) — a matrix product — then a bias and nonlinearity. The forward pass is a composition of these; batching turns many inputs into one matmul, which is why GPUs are used.</div></div>
+<div class="qa"><div class="q">Q5 · What is $(AB)^\top$?</div><div class="a">$B^\top A^\top$ — transposing a product reverses the order. It shows up constantly in backprop shape-matching.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>AB = composition</td><td>Stacked layers = composed transformations</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Entry = row · column</td><td>A layer is a batch of dot products</td><td class="freq f-h">High</td></tr>
+  <tr><td>Not commutative</td><td>Layer / operation order is a real choice</td><td class="freq f-h">High</td></tr>
+  <tr><td>Associative</td><td>Precompute &amp; chunk products; reason in blocks</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Shape rule (m×n)(n×p)</td><td>Debugging every shape error in ML code</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>@ vs * ; (AB)ᵀ=BᵀAᵀ</td><td>Correct code &amp; correct backprop</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../05_span_basis_rank/theory.html" style="border:0;color:inherit">05 · Span, basis, rank &amp; independence →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">We've moved and composed vectors. Now: how much space can a set of vectors actually <em>reach</em>? That's span, basis, and rank — the ideas behind redundant features, dimensionality, and when a matrix is invertible.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 4 — matrix multiplication as composition (pick B then A, watch AB)
+(function(){
+  const cv=document.getElementById('cplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, O={x:W*0.5,y:H*0.55}, S=60;
+  const PRESET={
+    rot:     [[0,-1],[1,0]],
+    shear:   [[1,1],[0,1]],
+    scale:   [[1.5,0],[0,1.5]],
+    reflect: [[-1,0],[0,1]],
+  };
+  let keyB='shear', keyA='rot', anim=null;
+
+  const P=v=>({x:O.x+v[0]*S, y:O.y-v[1]*S});
+  const mul=(A,B)=>[[A[0][0]*B[0][0]+A[0][1]*B[1][0], A[0][0]*B[0][1]+A[0][1]*B[1][1]],
+                    [A[1][0]*B[0][0]+A[1][1]*B[1][0], A[1][0]*B[0][1]+A[1][1]*B[1][1]]];
+  const apply=(M,p)=>[M[0][0]*p[0]+M[0][1]*p[1], M[1][0]*p[0]+M[1][1]*p[1]];
+  const lerp=(A,B,t)=>[[A[0][0]+(B[0][0]-A[0][0])*t, A[0][1]+(B[0][1]-A[0][1])*t],
+                       [A[1][0]+(B[1][0]-A[1][0])*t, A[1][1]+(B[1][1]-A[1][1])*t]];
+  const I=[[1,0],[0,1]];
+  const corners=[[0,0],[1,0],[1,1],[0,1]];
+
+  function base(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#EDEAE0';ctx.lineWidth=1;
+    for(let x=O.x%S;x<W;x+=S){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=O.y%S;y<H;y+=S){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,O.y);ctx.lineTo(W,O.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(O.x,0);ctx.lineTo(O.x,H);ctx.stroke();
+  }
+  function poly(M,pts,stroke,fill){
+    ctx.beginPath();
+    pts.forEach((c,k)=>{const p=P(apply(M,c)); k?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});
+    ctx.closePath();
+    if(fill){ctx.fillStyle=fill;ctx.fill();}
+    ctx.strokeStyle=stroke;ctx.lineWidth=2.5;ctx.stroke();
+  }
+  function arrow(f,t,col){
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(t.x,t.y);ctx.stroke();
+    const an=Math.atan2(t.y-f.y,t.x-f.x),h=11;
+    ctx.beginPath();ctx.moveTo(t.x,t.y);
+    ctx.lineTo(t.x-h*Math.cos(an-0.45),t.y-h*Math.sin(an-0.45));
+    ctx.lineTo(t.x-h*Math.cos(an+0.45),t.y-h*Math.sin(an+0.45));
+    ctx.closePath();ctx.fill();
+  }
+  function render(M){
+    base();
+    // original unit square (dashed)
+    ctx.setLineDash([6,5]);
+    poly(I, corners, '#9C99A6', 'rgba(156,153,166,0.10)');
+    ctx.setLineDash([]);
+    // transformed square
+    const det=M[0][0]*M[1][1]-M[0][1]*M[1][0];
+    poly(M, corners, det<0?'#C13A57':'#5A4FCF', det<0?'rgba(193,58,87,0.16)':'rgba(90,79,207,0.16)');
+    // basis images (columns of M)
+    arrow(P([0,0]), P([M[0][0],M[1][0]]), '#5A4FCF');
+    arrow(P([0,0]), P([M[0][1],M[1][1]]), '#0E8C80');
+  }
+  function upd(){
+    const A=PRESET[keyA], B=PRESET[keyB], AB=mul(A,B), BA=mul(B,A);
+    const r=v=>Math.round(v*100)/100;
+    document.getElementById('rProd').textContent=`[[${r(AB[0][0])}, ${r(AB[0][1])}], [${r(AB[1][0])}, ${r(AB[1][1])}]]`;
+    const same=Math.abs(AB[0][0]-BA[0][0])<1e-9&&Math.abs(AB[0][1]-BA[0][1])<1e-9&&Math.abs(AB[1][0]-BA[1][0])<1e-9&&Math.abs(AB[1][1]-BA[1][1])<1e-9;
+    const el=document.getElementById('rComm');
+    el.textContent = same ? 'AB = BA (these commute)' : 'AB ≠ BA (order matters!)';
+    el.style.color = same ? '#0E8C80' : '#C13A57';
+    if(!anim) render(AB);
+    document.querySelectorAll('.ctrl').forEach(b=>{
+      b.classList.toggle('active', (b.dataset.slot==='A'&&b.dataset.key===keyA)||(b.dataset.slot==='B'&&b.dataset.key===keyB));
+    });
+  }
+  document.querySelectorAll('.ctrl').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.slot==='A') keyA=b.dataset.key; else keyB=b.dataset.key; upd();
+  }));
+  const play=document.getElementById('playBtn');
+  if(play) play.addEventListener('click',()=>{
+    if(window.MFML_REDUCED || anim) { return; }
+    const A=PRESET[keyA], B=PRESET[keyB], AB=mul(A,B);
+    play.disabled=true; const orig=play.textContent; play.textContent='playing…';
+    let step=0; const N=90;
+    anim=setInterval(()=>{
+      step++; const t=step/N;
+      if(t<=0.5) render(lerp(I,B,t/0.5));         // phase 1: identity -> B
+      else       render(lerp(B,AB,(t-0.5)/0.5));  // phase 2: B -> A·B
+      if(step>=N){ clearInterval(anim); anim=null; play.disabled=false; play.textContent=orig; render(AB); }
+    },22);
+  });
+  upd();
+})();
+</script>
+</body>
+</html>
