@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Capstone: the whole spine · Math for ML</title>
+<meta name="description" content="Eighteen sessions, one story. How the pieces connect, a single worked example that uses them all, and an interview cheat-sheet.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Capstone: the whole spine · Math for ML">
+<meta property="og:description" content="Eighteen sessions, one story. How the pieces connect, a single worked example that uses them all, and an interview cheat-sheet.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="19_capstone">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#spine">The spine</a>
+  <a href="#example">One worked example</a>
+  <a href="#cheat">Interview cheat-sheet</a>
+  <a href="#next">Where to go next</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Capstone · ★</div>
+    <h1>Capstone: the whole spine</h1>
+    <p class="lede">Eighteen sessions, one story. How the pieces connect, a single worked example that uses them all, and an interview cheat-sheet.</p>
+    <div class="meta"><span>~12 min read</span><span class="dot"></span><span>Recap & synthesis</span><span class="dot"></span><span>Prereq: Sessions 01–18</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<style>
+  .cap-spine{background:var(--accent-soft); border:1px solid var(--rule); border-left:3px solid var(--accent);
+    border-radius:14px; padding:20px 24px; margin:22px 0; font-size:1.05rem; line-height:1.6;}
+  .cap-spine b{color:var(--accent);}
+  .cap-flow{display:grid; grid-template-columns:1fr; gap:12px; margin:24px 0;}
+  .cap-pillar{background:var(--card); border:1px solid var(--rule); border-radius:14px; padding:16px 18px;}
+  .cap-pillar .pl{font-family:'JetBrains Mono',monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:4px;}
+  .cap-pillar .pd{font-size:.9rem; color:var(--muted); margin-bottom:10px;}
+  .cap-chips{display:flex; flex-wrap:wrap; gap:7px;}
+  .cap-chips a{font-family:'JetBrains Mono',monospace; font-size:.74rem; text-decoration:none; color:var(--ink);
+    background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:5px 10px;}
+  .cap-chips a:hover{border-color:var(--accent); color:var(--accent);}
+  .cap-arrow{text-align:center; color:var(--accent); font-size:1.2rem; line-height:1; margin:-4px 0;}
+  .cap-step{border-left:3px solid var(--rule-strong); padding:4px 0 4px 18px; margin:14px 0;}
+  .cap-step .sn{font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--accent); letter-spacing:.05em;}
+  .cap-step b{color:var(--ink-strong);}
+</style>
+
+<p class="dropcap">Eighteen sessions, one idea. You started with "a data row is a point in space" and ended with "cross-entropy is a KL divergence to the label." In between, four pillars stacked into a single pipeline that <em>is</em> machine learning: represent, transform, optimize, and quantify uncertainty. This capstone zooms out — the spine that connects everything, one example that touches nearly every session, and a one-page cheat-sheet for interviews.</p>
+
+<div class="cap-spine">
+  <b>The spine, in one breath:</b> data becomes <b>vectors</b> → <b>matrices</b> move and compose them → <b>eigen/SVD</b> expose their structure → <b>derivatives &amp; gradients</b> measure how a loss changes → <b>gradient descent + backprop</b> minimize it → <b>probability</b> models the uncertainty → <b>MLE</b> turns likelihoods into the loss → <b>cross-entropy/KL</b> ties it shut.
+</div>
+
+<!-- ═════════ SPINE ═════════ -->
+<h2 id="spine"><span class="num">Map</span>How the 18 sessions connect</h2>
+
+<p>Each pillar hands its output to the next. Every chip links back to its session.</p>
+
+<div class="cap-flow">
+  <div class="cap-pillar">
+    <div class="pl">Pillar I · Linear Algebra</div>
+    <div class="pd">Represent &amp; transform data. Turn records into vectors, move them with matrices, uncover their structure.</div>
+    <div class="cap-chips">
+      <a href="../01_vectors/theory.html">01 Vectors</a>
+      <a href="../02_dot_product/theory.html">02 Dot product</a>
+      <a href="../03_matrices/theory.html">03 Matrices</a>
+      <a href="../04_matrix_multiplication/theory.html">04 Matmul</a>
+      <a href="../05_span_basis_rank/theory.html">05 Span/rank</a>
+      <a href="../06_eigenvalues/theory.html">06 Eigen</a>
+      <a href="../07_svd_pca/theory.html">07 SVD/PCA</a>
+    </div>
+  </div>
+  <div class="cap-arrow">↓ &nbsp; a model is a function <em>over</em> these vectors — now make it learn</div>
+  <div class="cap-pillar">
+    <div class="pl">Pillar II · Calculus</div>
+    <div class="pd">Optimize. Measure how a loss changes with each parameter, then step downhill.</div>
+    <div class="cap-chips">
+      <a href="../08_derivatives/theory.html">08 Derivatives</a>
+      <a href="../09_partial_derivatives/theory.html">09 Partials/Jacobian</a>
+      <a href="../10_chain_rule_backprop/theory.html">10 Chain rule/backprop</a>
+      <a href="../11_gradient_descent/theory.html">11 Gradient descent</a>
+    </div>
+  </div>
+  <div class="cap-arrow">↓ &nbsp; but data is noisy and models are uncertain — quantify it</div>
+  <div class="cap-pillar">
+    <div class="pl">Pillar III · Probability &amp; Statistics</div>
+    <div class="pd">Reason under uncertainty. Model randomness, summarize it, and decide what's real.</div>
+    <div class="cap-chips">
+      <a href="../12_probability_bayes/theory.html">12 Bayes</a>
+      <a href="../13_distributions/theory.html">13 Distributions</a>
+      <a href="../14_expectation_covariance/theory.html">14 Cov matrix</a>
+      <a href="../15_sampling_clt/theory.html">15 CLT</a>
+      <a href="../16_inference/theory.html">16 Inference/A-B</a>
+      <a href="../17_mle_cross_entropy/theory.html">17 MLE</a>
+    </div>
+  </div>
+  <div class="cap-arrow">↓ &nbsp; likelihoods become losses — one final lens ties them together</div>
+  <div class="cap-pillar">
+    <div class="pl">Pillar IV · Information Theory</div>
+    <div class="pd">The unifying view: losses are measures of surprise between distributions.</div>
+    <div class="cap-chips">
+      <a href="../18_information_theory/theory.html">18 Entropy / cross-entropy / KL</a>
+    </div>
+  </div>
+</div>
+
+<div class="callout c-why"><span class="tag">The recurring threads</span>
+A few ideas thread through the whole course: the <b>dot product</b> (S2) reappears as matmul (S4), attention, and the covariance matrix (S14); <b>‖v‖=√(v·v)</b> links norms (S1) to it; the <b>covariance ellipse</b> (S13/14) is the <b>PCA/SVD</b> ellipse (S6/7); the <b>difference vector</b> (S1) becomes the <b>gradient</b> (S9) that <b>descent</b> follows (S11); and <b>cross-entropy</b> (S17) is a <b>KL divergence</b> (S18). Spot these and the math stops feeling like separate topics.</div>
+
+<!-- ═════════ EXAMPLE ═════════ -->
+<h2 id="example"><span class="num">Synthesis</span>One example that uses (almost) everything</h2>
+
+<p><strong>Training a spam classifier — mathematically.</strong> Follow one email through the whole pipeline and watch the sessions light up:</p>
+
+<div class="cap-step"><span class="sn">S1, S13</span><br>The email becomes a <b>feature vector</b> $\mathbf{x}\in\mathbb{R}^n$ (word counts / an embedding) — a point in space. Its label is a <b>Bernoulli</b> outcome (spam = 1). <a class="xref" href="../01_vectors/theory.html">↳ S1</a> <a class="xref" href="../13_distributions/theory.html">↳ S13</a></div>
+
+<div class="cap-step"><span class="sn">S2, S4</span><br>The model computes a score $\mathbf{w}\cdot\mathbf{x}+b$ — a <b>dot product</b> — and for a batch of emails that's one <b>matrix multiplication</b> $XW^\top$. A deep model stacks several (composition). <a class="xref" href="../02_dot_product/theory.html">↳ S2</a> <a class="xref" href="../04_matrix_multiplication/theory.html">↳ S4</a></div>
+
+<div class="cap-step"><span class="sn">S13, S17</span><br>A <b>sigmoid</b> squashes the score to $q=P(\text{spam})$ (a Bernoulli parameter). The loss is <b>cross-entropy = negative log-likelihood</b>, derived by <b>MLE</b> from the Bernoulli assumption. <a class="xref" href="../17_mle_cross_entropy/theory.html">↳ S17</a></div>
+
+<div class="cap-step"><span class="sn">S18</span><br>That cross-entropy <em>is</em> a <b>KL divergence</b> from the model's prediction to the one-hot label — how many extra bits the model's beliefs cost. <a class="xref" href="../18_information_theory/theory.html">↳ S18</a></div>
+
+<div class="cap-step"><span class="sn">S8–S11</span><br>Training minimizes that loss: <b>backprop</b> (the chain rule run backward) computes the <b>gradient</b> w.r.t. every weight, and <b>gradient descent</b> steps opposite it, one <b>mini-batch</b> at a time. <a class="xref" href="../10_chain_rule_backprop/theory.html">↳ S10</a> <a class="xref" href="../11_gradient_descent/theory.html">↳ S11</a></div>
+
+<div class="cap-step"><span class="sn">S1, S17</span><br>To fight overfitting, add <b>L2 regularization</b> — which is a <b>Gaussian prior</b> on the weights (MAP), and geometrically an <b>L2 norm</b> penalty. <a class="xref" href="../17_mle_cross_entropy/theory.html">↳ S17</a></div>
+
+<div class="cap-step"><span class="sn">S5, S7, S14</span><br>Before training you might <b>standardize</b> features (mean/variance, S14), drop <b>collinear</b> ones (rank, S5), or <b>PCA</b>-compress them (SVD, S7). <a class="xref" href="../05_span_basis_rank/theory.html">↳ S5</a> <a class="xref" href="../07_svd_pca/theory.html">↳ S7</a></div>
+
+<div class="cap-step"><span class="sn">S12, S15, S16</span><br>Evaluating: precision on the rare spam class is <b>base-rate</b>-sensitive (Bayes, S12); the test-set metric is a <b>sample mean</b> with a <b>standard error</b> (CLT, S15); and "is model B better than A?" is a <b>hypothesis test / A-B</b> (S16). <a class="xref" href="../16_inference/theory.html">↳ S16</a></div>
+
+<p style="margin-top:18px">Twelve of the eighteen sessions, in one classifier. That's the point: these aren't separate subjects — they're the stages of a single machine that turns data into decisions.</p>
+
+<!-- ═════════ CHEAT SHEET ═════════ -->
+<h2 id="cheat"><span class="num">Revision</span>Interview cheat-sheet</h2>
+<p>The one-liners worth having on instant recall, by pillar.</p>
+
+<table class="sum">
+  <thead><tr><th>Idea</th><th>The one-liner</th></tr></thead>
+  <tbody>
+  <tr><td>Vector / norm</td><td>An ordered list = a point in ℝⁿ; ‖v‖ is its length; distance = ‖a−b‖.</td></tr>
+  <tr><td>Dot product</td><td>a·b = ‖a‖‖b‖cos θ — agreement; cosine similarity normalizes out length.</td></tr>
+  <tr><td>Matrix</td><td>A linear transformation; its columns are where the basis vectors land.</td></tr>
+  <tr><td>Matmul</td><td>Composition ("B then A"); not commutative, is associative; entry = row·column.</td></tr>
+  <tr><td>Rank / det</td><td>Independent columns; full rank ⟺ det≠0 ⟺ invertible ⟺ spans ℝⁿ.</td></tr>
+  <tr><td>Eigen</td><td>Av=λv: directions a matrix only scales; symmetric ⇒ orthogonal eigenvectors.</td></tr>
+  <tr><td>SVD / PCA</td><td>Any matrix = rotate·stretch·rotate; PCA = eigenvectors of the covariance.</td></tr>
+  <tr><td>Derivative / gradient</td><td>Slope; ∇f points steepest uphill, so −∇f is downhill.</td></tr>
+  <tr><td>Chain rule / backprop</td><td>Derivatives multiply along a chain; backprop = it run backward (upstream × local).</td></tr>
+  <tr><td>Gradient descent</td><td>w ← w − η∇L; η too big diverges, too small crawls; mini-batch is the default.</td></tr>
+  <tr><td>Bayes</td><td>Posterior ∝ likelihood × prior; always respect the base rate.</td></tr>
+  <tr><td>Gaussian</td><td>μ (center), σ (spread); 68–95–99.7; covariance ellipse = PCA axes.</td></tr>
+  <tr><td>Variance / covariance</td><td>Var=E[X²]−E[X]²; correlation∈[−1,1]; uncorrelated ≠ independent.</td></tr>
+  <tr><td>CLT</td><td>Sample means → Gaussian, SE = σ/√n; halve error ⇒ 4× data.</td></tr>
+  <tr><td>Inference</td><td>p = P(data | H₀), not P(H₀ | data); report effect size + CI.</td></tr>
+  <tr><td>MLE</td><td>Maximize likelihood = minimize NLL; Gaussian→MSE, Bernoulli→cross-entropy.</td></tr>
+  <tr><td>Info theory</td><td>Cross-entropy = entropy + KL; minimizing CE = fitting q to p; KL is asymmetric.</td></tr>
+  </tbody>
+</table>
+
+<!-- ═════════ NEXT ═════════ -->
+<h2 id="next"><span class="num">Beyond</span>Where to go next</h2>
+<p>This track is the mathematical foundation. To turn it into ML/GenAI engineering, the natural follow-ons — in job-relevance order:</p>
+<ul>
+  <li><strong>Classical ML depth</strong> — scikit-learn end to end: regression, trees, gradient boosting, cross-validation, the metrics zoo (you've already built fraud &amp; churn projects — this formalizes them).</li>
+  <li><strong>Deep learning</strong> — PyTorch: tensors, autograd (Session 10, automated), training loops, CNNs, then Transformers (Sessions 2 &amp; 4 are the attention math).</li>
+  <li><strong>NLP &amp; GenAI</strong> — embeddings (Session 1 vectors), attention (dot products), RAG (your OpsRAG project), fine-tuning incl. LoRA (Session 7 low-rank).</li>
+  <li><strong>MLOps</strong> — the "engineer" half: Docker, FastAPI serving, experiment tracking, CI/CD, one cloud, monitoring. This is the differentiator on the résumé.</li>
+</ul>
+<p>Every one of those reuses the math you just finished. The vectors, gradients, and cross-entropy don't go away — they become the vocabulary you think in.</p>
+
+<div class="next">
+  <span class="lbl">🎓 That's the whole track</span>
+  <h3><a href="../index.html" style="border:0;color:inherit">Back to all 18 sessions →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">From a data row as a point in space to why cross-entropy is a KL divergence — the math an ML engineer actually uses, learned by hand, verified in NumPy, and connected into one story. Take it to your projects and your interviews. Well done.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+
+</script>
+</body>
+</html>

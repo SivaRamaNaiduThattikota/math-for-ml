@@ -170,6 +170,12 @@ SESSIONS = [
               ("s3","3 · Cross-entropy"),("s4","4 · KL divergence"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
+    dict(num="★", slug="19_capstone", title="Capstone: the whole spine",
+         lede="Eighteen sessions, one story. How the pieces connect, a single worked example "
+              "that uses them all, and an interview cheat-sheet.",
+         meta=["~12 min read", "Recap & synthesis", "Prereq: Sessions 01–18"],
+         toc=[("spine","The spine"),("example","One worked example"),
+              ("cheat","Interview cheat-sheet"),("next","Where to go next")]),
 ]
 
 GROUP = {  # eyebrow label per session range
@@ -177,6 +183,7 @@ GROUP = {  # eyebrow label per session range
     **{f"{i:02d}": "Calculus" for i in range(8, 12)},
     **{f"{i:02d}": "Probability & Statistics" for i in range(12, 18)},
     "18": "Information Theory",
+    "★": "Capstone",
 }
 
 PAGE = """<!DOCTYPE html>

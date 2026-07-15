@@ -178,6 +178,9 @@
   <div class="group"><div class="sub">Pillar IV</div><h2>Information Theory</h2></div>
   <div class="grid" id="g-info"></div>
 
+  <div class="group"><div class="sub">Finale</div><h2>Capstone</h2></div>
+  <div class="grid" id="g-cap"></div>
+
   <div class="companion">
     <div class="group"><div class="sub">📖 Companion</div><h2>Maps to <em>Mathematics for Machine Learning</em></h2></div>
     <p class="comp-intro">This track is the interactive, intuition-first front end to the standard graduate text
@@ -207,7 +210,7 @@
 <script>
 (function(){
   const SES = window.MFML_SESSIONS, GROUPS = window.MFML_GROUPS;
-  const map = {la:"g-la", calc:"g-calc", prob:"g-prob", info:"g-info"};
+  const map = {la:"g-la", calc:"g-calc", prob:"g-prob", info:"g-info", cap:"g-cap"};
   const done = (window.MFML_getDone ? window.MFML_getDone() : []);
 
   for (const s of SES){
@@ -232,10 +235,12 @@
   // progress ring
   const C = 2 * Math.PI * 52, fg = document.getElementById("ringFg");
   fg.style.strokeDasharray = C;
+  const nonCap = SES.filter(s => s.group !== "cap");
   function renderRing(){
-    const n = (window.MFML_getDone ? window.MFML_getDone() : []).length;
+    const done = (window.MFML_getDone ? window.MFML_getDone() : []);
+    const n = nonCap.filter(s => done.includes(s.slug)).length;
     document.getElementById("doneCount").textContent = n;
-    fg.style.strokeDashoffset = C * (1 - n / 18);
+    fg.style.strokeDashoffset = C * (1 - n / nonCap.length);
   }
   renderRing();
   document.getElementById("resetProg").onclick = () => {
