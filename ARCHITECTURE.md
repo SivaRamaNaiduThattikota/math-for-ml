@@ -226,6 +226,10 @@ exercises. A footer disclaimer states we're original and unaffiliated.
 - ✅ **Session 16 — Inference & hypothesis testing** (A/B test simulator with CI whiskers + two-proportion z-test, classical stats + what-a-p-value-is-not deep-dive).
 - ✅ **Session 17 — MLE & cross-entropy** (coin likelihood-curve MLE explorer, MML §8.3/§9 + Gaussian→MSE, Bernoulli→cross-entropy, MAP→L2/L1-prior deep-dive).
 - ✅ **Session 18 — Information theory** (binary entropy curve with live cross-entropy & KL, entropy/CE/KL + KL-asymmetry & CE=H+KL deep-dive).
+- ✅ **Session 19 — Linear regression & bias–variance** (polynomial-fit under/overfit visualizer, MML Ch 9/8; **code executed & verified**).
+- ✅ **Session 20 — Statistical tests: t / χ² / ANOVA** (t-vs-normal df slider; SciPy tests **executed & verified**).
+- ✅ **Session 21 — Bayesian inference & conjugate priors** (Beta-Binomial updating demo, MML §6.6; SciPy **executed & verified**).
+- ✅ **Applied Statistics pillar (19–21)** added to fill the stats gaps (regression/R²/residuals, t/χ²/ANOVA, Bayesian/conjugacy + distribution zoo). Capstone renumbered → **22_capstone**.
 - ✅ Design system, 3 themes, generator, landing page, all interactions — complete.
 - ✅ MML companion layer — reference bars/chips, "Going deeper" proofs, index mapping table, attribution.
 

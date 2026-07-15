@@ -170,7 +170,31 @@ SESSIONS = [
               ("s3","3 · Cross-entropy"),("s4","4 · KL divergence"),("s5","5 · NumPy"),
               ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
               ("interview","Interview"),("summary","Summary")]),
-    dict(num="★", slug="19_capstone", title="Capstone: the whole spine",
+    dict(num="19", slug="19_linear_regression", title="Linear regression & bias–variance",
+         lede="The template model: predict with a dot product, fit by least squares (= Gaussian "
+              "MLE), judge with R² and residuals, and balance bias against variance.",
+         meta=["~22 min read", "NumPy paired notebook", "Prereq: MLE, Gradient descent"],
+         toc=[("s1","1 · The linear model"),("s2","2 · Normal equation"),
+              ("s3","3 · R² & residuals"),("s4","4 · Bias–variance"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    dict(num="20", slug="20_stat_tests", title="Statistical tests: t, χ² & ANOVA",
+         lede="Beyond the z-test: the t-distribution for small samples, χ² for categorical "
+              "data, and ANOVA to compare several group means at once.",
+         meta=["~20 min read", "NumPy + SciPy notebook", "Prereq: Inference"],
+         toc=[("s1","1 · The t-distribution"),("s2","2 · t-tests"),
+              ("s3","3 · χ² tests"),("s4","4 · ANOVA"),("s5","5 · SciPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    dict(num="21", slug="21_bayesian_inference", title="Bayesian inference & conjugate priors",
+         lede="Update beliefs with data: prior → posterior. The Beta-Binomial conjugate pair, "
+              "plus the distribution zoo (Poisson, Exponential, Beta, Gamma).",
+         meta=["~20 min read", "NumPy + SciPy notebook", "Prereq: Bayes, Distributions"],
+         toc=[("s1","1 · Bayesian updating"),("s2","2 · Conjugate priors"),
+              ("s3","3 · Beta-Binomial"),("s4","4 · The distribution zoo"),("s5","5 · NumPy"),
+              ("s6","6 · Inside ML"),("ref","Rules & traps"),("exercises","Exercises"),
+              ("interview","Interview"),("summary","Summary")]),
+    dict(num="★", slug="22_capstone", title="Capstone: the whole spine",
          lede="Eighteen sessions, one story. How the pieces connect, a single worked example "
               "that uses them all, and an interview cheat-sheet.",
          meta=["~12 min read", "Recap & synthesis", "Prereq: Sessions 01–18"],
@@ -183,6 +207,7 @@ GROUP = {  # eyebrow label per session range
     **{f"{i:02d}": "Calculus" for i in range(8, 12)},
     **{f"{i:02d}": "Probability & Statistics" for i in range(12, 18)},
     "18": "Information Theory",
+    **{f"{i:02d}": "Applied Statistics" for i in range(19, 22)},
     "★": "Capstone",
 }
 

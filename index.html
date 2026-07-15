@@ -162,7 +162,7 @@
       <circle class="bg" cx="60" cy="60" r="52"></circle>
       <circle class="fg" id="ringFg" cx="60" cy="60" r="52"></circle>
     </svg>
-    <div class="ring-num"><span id="doneCount">0</span> / 18</div>
+    <div class="ring-num"><span id="doneCount">0</span> / <span id="totCount">21</span></div>
     <div class="cap">Sessions complete</div>
     <button class="reset" id="resetProg">Reset progress</button>
   </div>
@@ -177,6 +177,9 @@
   <div class="grid" id="g-prob"></div>
   <div class="group"><div class="sub">Pillar IV</div><h2>Information Theory</h2></div>
   <div class="grid" id="g-info"></div>
+
+  <div class="group"><div class="sub">Pillar V</div><h2>Applied Statistics</h2></div>
+  <div class="grid" id="g-stats"></div>
 
   <div class="group"><div class="sub">Finale</div><h2>Capstone</h2></div>
   <div class="grid" id="g-cap"></div>
@@ -210,7 +213,7 @@
 <script>
 (function(){
   const SES = window.MFML_SESSIONS, GROUPS = window.MFML_GROUPS;
-  const map = {la:"g-la", calc:"g-calc", prob:"g-prob", info:"g-info", cap:"g-cap"};
+  const map = {la:"g-la", calc:"g-calc", prob:"g-prob", info:"g-info", stats:"g-stats", cap:"g-cap"};
   const done = (window.MFML_getDone ? window.MFML_getDone() : []);
 
   for (const s of SES){
@@ -236,6 +239,7 @@
   const C = 2 * Math.PI * 52, fg = document.getElementById("ringFg");
   fg.style.strokeDasharray = C;
   const nonCap = SES.filter(s => s.group !== "cap");
+  document.getElementById("totCount").textContent = nonCap.length;
   function renderRing(){
     const done = (window.MFML_getDone ? window.MFML_getDone() : []);
     const n = nonCap.filter(s => done.includes(s.slug)).length;

@@ -5,6 +5,7 @@ window.MFML_GROUPS = {
   calc: "Calculus",
   prob: "Probability & Statistics",
   info: "Information Theory",
+  stats:"Applied Statistics",
   cap:  "Capstone",
 };
 window.MFML_SESSIONS = [
@@ -26,5 +27,8 @@ window.MFML_SESSIONS = [
   ["prob","16","16_inference","Inference & hypothesis testing","Confidence intervals, p-values, and A/B tests.",true],
   ["prob","17","17_mle_cross_entropy","MLE & cross-entropy","Where loss functions actually come from.",true],
   ["info","18","18_information_theory","Information theory","Entropy, cross-entropy, and KL divergence.",true],
-  ["cap","★","19_capstone","Capstone: the whole spine","How all 18 sessions connect — one story, one worked example, an interview cheat-sheet.",true],
+  ["stats","19","19_linear_regression","Linear regression & bias–variance","The template model: least squares, R², residuals, and under/overfitting.",true],
+  ["stats","20","20_stat_tests","Statistical tests: t, χ² & ANOVA","The test toolbox — small samples, categorical data, and many groups.",true],
+  ["stats","21","21_bayesian_inference","Bayesian inference & conjugate priors","Updating beliefs with data; Beta/Poisson/Gamma and the conjugacy shortcut.",true],
+  ["cap","★","22_capstone","Capstone: the whole spine","How all sessions connect — one story, one worked example, an interview cheat-sheet.",true],
 ].map(([group,num,slug,title,desc,ready])=>({group,num,slug,title,desc,ready}));

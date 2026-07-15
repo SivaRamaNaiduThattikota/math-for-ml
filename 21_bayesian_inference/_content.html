@@ -1,0 +1,262 @@
+<p class="dropcap">Session 16 was <em>frequentist</em>: fixed-but-unknown parameters, p-values, confidence intervals. There's another way to reason, and it's the one that feels most like learning. In <strong>Bayesian inference</strong> you hold a <em>distribution of belief</em> over a parameter, and each new data point <em>updates</em> it — prior → posterior — exactly the Bayes rule from Session 12, now run continuously. With the right prior (a <strong>conjugate</strong> one), that update is a one-line arithmetic shortcut. This is the machinery behind Bayesian A/B tests, bandits, and the priors that regularize models.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Update a belief with data: <strong>prior → posterior</strong>, and read a <strong>credible interval</strong>.</li>
+    <li>Explain <strong>conjugate priors</strong> and why they make updating trivial.</li>
+    <li>Use the <strong>Beta-Binomial</strong> pair — the canonical conjugate example.</li>
+    <li>Place the <strong>distribution zoo</strong> — Poisson, Exponential, Beta, Gamma — and what each models.</li>
+    <li>Connect Bayesian thinking to regularization, bandits, and uncertainty.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">§6.6 Conjugacy &amp; the Exponential Family, §6.2 Distributions</span>, extending the Bayes rule of Session 12.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">Bayesian updating</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Conjugate priors</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">Beta-Binomial</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">The distribution zoo</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy / SciPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">prior $P(\theta)$</span><span class="def">Belief about a parameter before seeing data.</span>
+    <span class="sym">posterior $P(\theta\mid D)$</span><span class="def">Updated belief after data — the goal.</span>
+    <span class="sym">conjugate</span><span class="def">Prior whose posterior stays in the same family.</span>
+    <span class="sym">Beta$(\alpha,\beta)$</span><span class="def">A distribution over a probability $\in[0,1]$.</span>
+    <span class="sym">credible interval</span><span class="def">A range containing the parameter with stated posterior probability.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>Bayesian updating — belief as a distribution</h2>
+
+<p>Bayes' theorem (Session 12), read as a learning rule:</p>
+<div class="mathband">$$ \underbrace{P(\theta\mid D)}_{\text{posterior}} \;\propto\; \underbrace{P(D\mid\theta)}_{\text{likelihood}}\;\underbrace{P(\theta)}_{\text{prior}} $$</div>
+
+<p>Instead of estimating a single number, you carry a whole <strong>distribution over the parameter</strong> and sharpen it as evidence arrives: today's posterior becomes tomorrow's prior. From that posterior you can read a <strong>credible interval</strong> — "there's a 95% probability the parameter lies in [a, b]." Note that's a genuinely different (and more intuitive) statement than a frequentist confidence interval (Session 16), which was about the <em>procedure's</em> long-run coverage, not this one interval.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+It's how you actually update a forecast: you start with a belief ("conversion is probably around 10%"), watch a few days of data, and revise — not to one new number, but to a sharper <em>range</em> of plausible values. Bayesian inference formalizes that "revise as data comes in" instinct.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Conjugate priors — the arithmetic shortcut <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.6</a></h2>
+
+<p>Computing a posterior usually means a messy integral for the normalizer $P(D)$. But for special <strong>prior + likelihood</strong> pairings the posterior comes out in the <em>same family</em> as the prior — you just update its parameters. These are <strong>conjugate priors</strong>, and they turn Bayesian updating into simple bookkeeping. The classic examples:</p>
+<ul>
+  <li><strong>Beta</strong> prior + <strong>Binomial/Bernoulli</strong> likelihood → <strong>Beta</strong> posterior (probabilities).</li>
+  <li><strong>Gamma</strong> prior + <strong>Poisson</strong> likelihood → <strong>Gamma</strong> posterior (rates/counts).</li>
+  <li><strong>Gaussian</strong> prior + <strong>Gaussian</strong> likelihood → <strong>Gaussian</strong> posterior (means).</li>
+</ul>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>Beta-Binomial — conjugacy you can watch <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.6</a></h2>
+
+<p>The <strong>Beta$(\alpha,\beta)$</strong> distribution lives on $[0,1]$ — perfect as a belief about a <em>probability</em> (a conversion rate, a coin's bias). Its magic: after observing <strong>$h$ heads and $t$ tails</strong>, the posterior is simply</p>
+<div class="mathband">$$ \text{Beta}(\alpha,\beta) \;\xrightarrow{\ h\text{ heads},\ t\text{ tails}\ }\; \text{Beta}(\alpha+h,\ \beta+t) $$</div>
+
+<p>Add successes to $\alpha$, failures to $\beta$. That's the entire update. The parameters even have a reading: the prior acts like $\alpha-1$ imagined prior heads and $\beta-1$ prior tails ("pseudo-counts"). Add data below and watch the belief sharpen.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="betaplay" width="880" height="380"></canvas>
+    <div class="ctrlrow"><span class="lbl2">prior α:</span>
+      <input type="range" id="sA" min="0.5" max="8" step="0.5" value="2" style="flex:1;accent-color:var(--accent);max-width:180px;"><span id="rA" class="vd">2</span>
+      <span class="lbl2">prior β:</span>
+      <input type="range" id="sB" min="0.5" max="8" step="0.5" value="2" style="flex:1;accent-color:var(--accent);max-width:180px;"><span id="rB" class="vd">2</span></div>
+    <div class="ctrlrow"><span class="lbl2">observe:</span>
+      <button class="ctrl" id="addH">+ heads</button>
+      <button class="ctrl" id="addT">+ tails</button>
+      <button class="ctrl" id="resetD">reset data</button></div>
+    <div class="readout">
+      <span><span class="k">data</span> = <span class="va" id="rData">0H / 0T</span></span>
+      <span><span class="k">posterior mean</span> = <span class="vs" id="rMean">…</span></span>
+      <span><span class="k">95% credible</span> = <span class="vd" id="rCI">…</span></span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Beta-Binomial updating.</strong> The faint curve is your <b>prior</b> Beta(α, β); the solid amber curve is the <b>posterior</b> after the data you've added. Each "+ heads" shifts and sharpens it toward 1, each "+ tails" toward 0. With little data the prior dominates; as counts grow the posterior narrows around the observed rate — belief converging on evidence.</figcaption>
+</figure>
+
+<div class="callout c-good"><span class="tag">MLE vs MAP vs posterior mean</span>
+For 14 heads in 20 with a Beta(2,2) prior: the <b>MLE</b> is 14/20 = <b>0.70</b> (data only); the <b>posterior mean</b> is 16/24 ≈ <b>0.667</b>; the <b>MAP</b> (posterior mode) ≈ <b>0.682</b>. The prior gently pulls the estimate toward 0.5 — and that pull <em>is</em> regularization (Session 17). With more data, all three converge.</div>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>The distribution zoo <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML §6.2</a></h2>
+
+<p>Session 13 focused on the Gaussian; here are the other workhorses, each modelling a different kind of quantity:</p>
+<ul>
+  <li><strong>Bernoulli / Binomial</strong> — yes/no outcomes and their counts (Session 13).</li>
+  <li><strong>Poisson$(\lambda)$</strong> — counts of rare events in a fixed interval (arrivals, defects, clicks/hour). Mean = variance = $\lambda$.</li>
+  <li><strong>Exponential</strong> — waiting time <em>until</em> the next event (time between arrivals); memoryless.</li>
+  <li><strong>Gamma</strong> — positive continuous quantities (total waiting time, rates); generalizes the exponential and is conjugate to the Poisson.</li>
+  <li><strong>Beta</strong> — a distribution <em>over a probability</em> $\in[0,1]$; the natural prior for rates (above).</li>
+</ul>
+<p>Knowing which distribution fits your quantity is half of modelling it — and it tells you which likelihood (hence which loss, Session 17) to use.</p>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy / SciPy <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">from</span> scipy <span class="k">import</span> stats
+
+<span class="c"># Beta-Binomial: prior Beta(2,2), observe 14 heads / 6 tails</span>
+a0, b0 = <span class="n">2</span>, <span class="n">2</span>
+h, t = <span class="n">14</span>, <span class="n">6</span>
+a, b = a0 + h, b0 + t                     <span class="c"># posterior params — the whole update</span>
+<span class="f">print</span>(a, b, <span class="f">round</span>(a/(a+b), <span class="n">3</span>))            <span class="c"># 16 8 0.667  (posterior mean)</span>
+
+<span class="c"># 95% credible interval from the posterior</span>
+<span class="f">print</span>(np.round(stats.beta.ppf([<span class="n">0.025</span>, <span class="n">0.975</span>], a, b), <span class="n">3</span>))   <span class="c"># [0.471 0.836]</span>
+
+<span class="c"># MLE (data only) vs MAP (posterior mode) vs posterior mean</span>
+<span class="f">print</span>(h/(h+t), (a-<span class="n">1</span>)/(a+b-<span class="n">2</span>), a/(a+b))    <span class="c"># 0.70  0.682  0.667</span>
+
+<span class="c"># the zoo, sanity-checked</span>
+<span class="f">print</span>(stats.poisson.mean(<span class="n">3</span>), stats.poisson.var(<span class="n">3</span>))    <span class="c"># 3.0 3.0  (mean = var)</span>
+<span class="f">print</span>(stats.expon.mean(scale=<span class="n">2</span>), stats.gamma.mean(<span class="n">3</span>, scale=<span class="n">2</span>))  <span class="c"># 2.0 6.0</span></pre>
+<div class="out">16 8 0.667
+[0.471 0.836]
+0.7 0.6818181818181818 0.6666666666666666
+3.0 3.0
+2.0 6.0</div>
+
+<div class="callout c-warn"><span class="tag">Credible interval ≠ confidence interval</span>
+A <b>95% credible interval</b> genuinely means "95% posterior probability the parameter is in here" — a statement about the parameter, given your prior. A frequentist <b>confidence interval</b> (Session 16) is a statement about the procedure across many repeats. They often look similar with lots of data and a flat prior, but they answer different questions.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>Priors are regularization.</strong> The MAP estimate (Session 17) is Bayesian: a Gaussian prior = L2, a Laplace prior = L1. Regularization strength is prior strength.</li>
+  <li><strong>Bayesian A/B testing &amp; bandits.</strong> Track a Beta posterior per variant; <strong>Thompson sampling</strong> picks the variant to show by sampling from these posteriors — exploration/exploitation without fixed sample sizes.</li>
+  <li><strong>Uncertainty quantification.</strong> Bayesian neural nets, Gaussian processes, and conformal methods give calibrated uncertainty, not just point predictions — vital for high-stakes decisions.</li>
+  <li><strong>Small-data regimes.</strong> A sensible prior stabilizes estimates when data is scarce (the pseudo-count effect), where pure MLE overfits.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Bayesian inference carries a <em>distribution</em> of belief and updates it with data (posterior ∝ likelihood × prior). Conjugate priors (Beta-Binomial, Gamma-Poisson, Gaussian-Gaussian) make that update pure arithmetic — and the prior is exactly the regularization you already use.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Priors matter most with little data</strong> — and wash out as data grows. State your prior; a strong wrong prior biases small-sample results.</li>
+  <li><strong>Credible ≠ confidence</strong> — don't claim frequentist coverage for a Bayesian interval or vice-versa.</li>
+  <li><strong>Conjugacy is a convenience, not a requirement</strong> — most real models aren't conjugate and need MCMC / variational inference.</li>
+  <li><strong>Beta(1,1) is uniform</strong> — a flat prior; then the posterior mean ≈ MLE (with a +1/+1 smoothing).</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li><strong>Posterior ∝ likelihood × prior</strong>; the posterior is your updated belief distribution.</li>
+  <li><strong>Conjugate prior</strong> ⇒ posterior in the same family ⇒ update = adjust parameters.</li>
+  <li><strong>Beta-Binomial:</strong> Beta$(\alpha,\beta)$ + $h$ heads, $t$ tails → Beta$(\alpha+h,\beta+t)$.</li>
+  <li>Read a <strong>credible interval</strong> from the posterior; it's a probability statement about the parameter.</li>
+  <li>The <strong>prior is regularization</strong> — MAP = MLE + a prior (Session 17).</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Confusing credible and confidence intervals</span>
+They answer different questions. Credible: "95% posterior probability θ is here." Confidence: "95% of such intervals cover θ across repeats." Say which you mean.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Over-trusting the prior on small data</span>
+With few observations the prior dominates the posterior. A biased or over-confident prior skews conclusions — choose weakly-informative priors unless you have real prior knowledge.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Assuming everything is conjugate</span>
+Conjugacy is the exception. Real Bayesian models usually need MCMC or variational approximations; don't force a conjugate shortcut where it doesn't hold.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">Prior Beta(2,2); you observe 3 heads and 1 tail. The posterior is…</div>
+  <button class="opt">Beta(3,1)</button>
+  <button class="opt">Beta(5,3) — add heads to α, tails to β.</button>
+  <button class="opt">Beta(2,2) still.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">A Gaussian prior on model weights corresponds to which regularization?</div>
+  <button class="opt">No regularization.</button>
+  <button class="opt">L1 (lasso).</button>
+  <button class="opt">L2 (ridge) — MAP with a Gaussian prior.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code> (uses SciPy).</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Prior Beta(2,2), observe 14 heads / 6 tails. Give the posterior parameters and mean.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Beta(16, 8); mean 16/24 ≈ <strong>0.667</strong>.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Compute the 95% credible interval for that posterior.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">stats.beta.ppf([<span class="n">.025</span>,<span class="n">.975</span>], <span class="n">16</span>, <span class="n">8</span>)   <span class="c"># [0.471, 0.836]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Compare MLE, MAP, and posterior mean for the above. Why do they differ, and what makes them converge?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>MLE 0.70 (data only), MAP 0.682, mean 0.667 — the Beta(2,2) prior pulls toward 0.5. More data shrinks the prior's influence, so all three converge to the true rate.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Show the prior washes out: with a Beta(2,2) prior, compare the posterior mean after 4 flips (3H1T) vs after 400 flips (300H100T).</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>4 flips: Beta(5,3), mean 0.625 (pulled from data's 0.75 toward 0.5). 400 flips: Beta(302,102), mean ≈ 0.748 ≈ the data rate 0.75 — the prior is now negligible.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Sketch Thompson sampling: two variants with Beta posteriors; sample one draw from each and pick the larger. Simulate which variant gets chosen more when one truly converts better.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">A=stats.beta(<span class="n">30</span>,<span class="n">70</span>); B=stats.beta(<span class="n">45</span>,<span class="n">55</span>)   <span class="c"># B better (~0.45 vs 0.30)</span>
+picks=[<span class="s">'B'</span> <span class="k">if</span> B.rvs()>A.rvs() <span class="k">else</span> <span class="s">'A'</span> <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">10000</span>)]
+picks.count(<span class="s">'B'</span>)/<span class="n">10000</span>   <span class="c"># most picks go to B, but A still explored</span></pre>
+    <p>Thompson sampling exploits the better variant while still exploring the other in proportion to its posterior probability of being best.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · What is Bayesian updating?</div><div class="a">Maintaining a distribution of belief over a parameter and revising it with data via posterior ∝ likelihood × prior; the posterior becomes the next prior as more data arrives.</div></div>
+<div class="qa"><div class="q">Q2 · What is a conjugate prior, with an example?</div><div class="a">A prior whose posterior stays in the same family, so updating is just parameter arithmetic. Beta prior + Binomial likelihood → Beta posterior: Beta(α,β) + h heads, t tails → Beta(α+h, β+t).</div></div>
+<div class="qa"><div class="q">Q3 · Credible interval vs confidence interval?</div><div class="a">A credible interval is a direct posterior-probability statement about the parameter ("95% probability θ is here"); a confidence interval is about the long-run coverage of the procedure. Different questions.</div></div>
+<div class="qa"><div class="q">Q4 · How does Bayesian inference relate to regularization?</div><div class="a">MAP estimation maximizes likelihood × prior; the prior's negative log is a penalty — a Gaussian prior gives L2, a Laplace prior gives L1. Regularization is a prior belief.</div></div>
+<div class="qa"><div class="q">Q5 · What is Thompson sampling?</div><div class="a">A bandit strategy: keep a posterior (e.g. Beta) per action, sample once from each, and take the action with the highest sample. It balances exploration and exploitation via the posteriors' uncertainty.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Bayesian updating</td><td>Learning as belief revision</td><td class="freq f-h">High</td></tr>
+  <tr><td>Conjugate priors</td><td>Closed-form updates; intuition</td><td class="freq f-m">Medium</td></tr>
+  <tr><td>Beta-Binomial</td><td>Rates, Bayesian A/B, bandits</td><td class="freq f-h">High</td></tr>
+  <tr><td>Distribution zoo</td><td>Poisson/Exp/Gamma/Beta — model the right quantity</td><td class="freq f-h">High</td></tr>
+  <tr><td>Prior = regularization</td><td>MAP; small-data stability</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Finale</span>
+  <h3><a href="../22_capstone/theory.html" style="border:0;color:inherit">★ Capstone: the whole spine →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">You've now covered the applied-statistics toolkit too. Head to the capstone to see how all the pieces — linear algebra, calculus, probability, and statistics — connect into one machine.</p>
+</div>

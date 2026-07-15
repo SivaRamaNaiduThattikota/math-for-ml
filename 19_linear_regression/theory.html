@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Linear regression & bias–variance · Math for ML</title>
+<meta name="description" content="The template model: predict with a dot product, fit by least squares (= Gaussian MLE), judge with R² and residuals, and balance bias against variance.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linear regression & bias–variance · Math for ML">
+<meta property="og:description" content="The template model: predict with a dot product, fit by least squares (= Gaussian MLE), judge with R² and residuals, and balance bias against variance.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="19_linear_regression">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · The linear model</a>
+  <a href="#s2">2 · Normal equation</a>
+  <a href="#s3">3 · R² & residuals</a>
+  <a href="#s4">4 · Bias–variance</a>
+  <a href="#s5">5 · NumPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Applied Statistics · 19</div>
+    <h1>Linear regression & bias–variance</h1>
+    <p class="lede">The template model: predict with a dot product, fit by least squares (= Gaussian MLE), judge with R² and residuals, and balance bias against variance.</p>
+    <div class="meta"><span>~22 min read</span><span class="dot"></span><span>NumPy paired notebook</span><span class="dot"></span><span>Prereq: MLE, Gradient descent</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">You've met every ingredient; now watch them cook a real model. <strong>Linear regression</strong> is the "hello world" of machine learning, and it quietly uses the whole course: features are <strong>vectors</strong>, the prediction is a <strong>dot product</strong>, fitting is <strong>least squares</strong> (which is <strong>maximum likelihood</strong> under Gaussian noise), and the danger of overfitting is the <strong>bias–variance trade-off</strong>. Understand regression deeply and you understand the shape of nearly every supervised model.</p>
+
+<p>This opens a short <strong>Applied Statistics</strong> pillar that turns the probability foundations into the tools a data scientist reaches for daily.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Write the linear model $\hat y = \mathbf{w}^\top\mathbf{x}+b$ and fit it by <strong>least squares</strong>.</li>
+    <li>Use the <strong>normal equation</strong> and know it's <strong>MLE</strong> under Gaussian noise.</li>
+    <li>Interpret <strong>$R^2$</strong> and read <strong>residuals</strong> to check the model's assumptions.</li>
+    <li>Explain the <strong>bias–variance trade-off</strong> — underfitting vs overfitting.</li>
+    <li>Connect regularization (ridge) to a prior, and to controlling variance.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> This session mirrors <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a> (Deisenroth, Faisal &amp; Ong) — <span class="secs">Ch 9 Linear Regression</span>, with <span class="secs">Ch 8 (model selection / bias–variance)</span>.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">The linear model</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">Least squares & the normal equation</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">R² & residuals</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">Bias–variance</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">NumPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$\hat y=\mathbf{w}^\top\mathbf{x}+b$</span><span class="def">The linear prediction (a dot product plus bias).</span>
+    <span class="sym">$\hat{\mathbf{w}}=(X^\top X)^{-1}X^\top\mathbf{y}$</span><span class="def">The normal-equation (least-squares) solution.</span>
+    <span class="sym">$r_i=y_i-\hat y_i$</span><span class="def">A residual — the model's error on point $i$.</span>
+    <span class="sym">$R^2$</span><span class="def">Fraction of the target's variance the model explains.</span>
+    <span class="sym">bias / variance</span><span class="def">Error from being too simple / too sensitive to the data.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>The linear model <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML Ch 9</a></h2>
+
+<p>Linear regression predicts a number as a weighted sum of features — a dot product (Session 2) plus a bias:</p>
+<div class="mathband">$$ \hat y = w_1x_1 + \dots + w_dx_d + b = \mathbf{w}^\top\mathbf{x}+b $$</div>
+
+<p>Fold the bias into the weights by adding a constant "1" feature, so the whole dataset is a single matrix equation $\hat{\mathbf{y}}=X\mathbf{w}$ (Session 4). Fitting means choosing $\mathbf{w}$ so the predictions are close to the true $\mathbf{y}$ — and "close" is measured by squared error.</p>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+It's the trend line you've dropped on countless charts — but multivariable and principled. Instead of one predictor, you weight many columns; instead of eyeballing, you solve for the weights that minimize total squared error. Every "what drives revenue?" coefficient question is linear regression.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>Least squares &amp; the normal equation</h2>
+
+<p>We pick $\mathbf{w}$ to minimize the <strong>sum of squared residuals</strong> $\sum_i(y_i-\hat y_i)^2$. Setting the gradient to zero (Session 9) gives a closed-form solution — the <strong>normal equation</strong>:</p>
+<div class="mathband">$$ \hat{\mathbf{w}} = (X^\top X)^{-1}X^\top\mathbf{y} $$</div>
+
+<p>Notice $X^\top X$ is (a scalar multiple of) the covariance matrix (Session 14) — and it's invertible only if the features are independent (full rank, Session 5). Collinear features make it singular, which is why multicollinearity breaks regression. Crucially, minimizing squared error is <strong>exactly maximum likelihood under Gaussian noise</strong> (Session 17): least squares isn't arbitrary, it's the MLE for $y=\mathbf{w}^\top\mathbf{x}+\varepsilon,\ \varepsilon\sim\mathcal{N}(0,\sigma^2)$.</p>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>$R^2$ &amp; residuals — is the fit any good?</h2>
+
+<p>The <strong>coefficient of determination $R^2$</strong> measures the fraction of the target's variance the model explains:</p>
+<div class="mathband">$$ R^2 = 1 - \frac{\sum_i(y_i-\hat y_i)^2}{\sum_i(y_i-\bar y)^2} = 1 - \frac{\text{SS}_{\text{res}}}{\text{SS}_{\text{tot}}} $$</div>
+
+<p>$R^2=1$ is a perfect fit; $R^2=0$ is no better than predicting the mean; it can even go <em>negative</em> on test data for a bad model. But a single number hides a lot — always look at the <strong>residuals</strong> $r_i=y_i-\hat y_i$. Linear regression assumes they are <strong>random, centered at zero, equal-variance (homoscedastic), and roughly normal</strong>. A <strong>residual plot</strong> (residuals vs predictions) should look like formless noise; any pattern — a curve, a fan shape, clusters — means an assumption is violated (nonlinearity, heteroscedasticity, missing feature).</p>
+
+<div class="callout c-warn"><span class="tag">R² alone lies</span>
+A high $R^2$ can hide curved residuals (wrong model), and $R^2$ always <em>increases</em> as you add features even useless ones (use <em>adjusted</em> $R^2$). Judge a regression by its residual plot and its <em>test</em> performance, not the training $R^2$.</div>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>The bias–variance trade-off <a class="mmlref" href="https://mml-book.com" target="_blank" rel="noopener">📖 MML Ch 8</a></h2>
+
+<p>Why not just fit a wiggly high-degree curve that nails every point? Because a model's expected test error splits into two competing pieces:</p>
+<div class="mathband">$$ \text{Error} = \underbrace{\text{Bias}^2}_{\text{too simple}} + \underbrace{\text{Variance}}_{\text{too sensitive}} + \underbrace{\text{irreducible noise}}_{\text{unavoidable}} $$</div>
+
+<ul>
+  <li><strong>High bias (underfitting)</strong> — the model is too simple (a line for a curve); it misses the pattern on both train and test.</li>
+  <li><strong>High variance (overfitting)</strong> — the model is too flexible; it memorizes noise, so train error is tiny but test error explodes.</li>
+</ul>
+<p>The sweet spot is in between. Drag the polynomial degree below and watch it happen — the fitted curve go from too-stiff to just-right to wildly overfit, with the test error tracing the classic U-shape.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="brplay" width="880" height="400"></canvas>
+    <div class="ctrlrow"><span class="lbl2">polynomial degree:</span>
+      <input type="range" id="sDeg" min="1" max="12" step="1" value="1" style="flex:1;accent-color:var(--accent);max-width:320px;"><span id="rDeg" class="vd">1</span>
+      <button class="btn-anim" id="brBtn" style="margin-top:0">🎲 New data</button></div>
+    <div class="readout">
+      <span><span class="k">train MSE</span> = <span class="va" id="rTrain">…</span></span>
+      <span><span class="k">test MSE</span> = <span class="vs" id="rTest">…</span></span>
+      <span id="rFit" class="vd">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — Bias–variance, live.</strong> Indigo dots are training data, rose dots are held-out test data, drawn from a smooth curve (sine) plus noise. The amber curve is a degree-$d$ polynomial fit to the <em>training</em> points. Low degree = <b>underfit</b> (stiff, high train &amp; test error); very high degree = <b>overfit</b> (wiggles through every train point, tiny train error but test error blows up). Somewhere in the middle is best.</figcaption>
+</figure>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In NumPy <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+rng = np.random.default_rng(<span class="n">0</span>)
+n = <span class="n">100</span>
+x = rng.uniform(<span class="n">0</span>, <span class="n">5</span>, n)
+y = <span class="n">2.5</span>*x + <span class="n">1.0</span> + rng.normal(<span class="n">0</span>, <span class="n">1.5</span>, n)   <span class="c"># true slope 2.5, intercept 1</span>
+
+X = np.column_stack([np.ones(n), x])         <span class="c"># design matrix [1, x]</span>
+w = np.linalg.lstsq(X, y, rcond=<span class="k">None</span>)[<span class="n">0</span>]      <span class="c"># least squares</span>
+<span class="f">print</span>(w.round(<span class="n">3</span>))                            <span class="c"># [0.989 2.461]  ~ intercept 1, slope 2.5</span>
+
+yhat = X &#64; w
+r2 = <span class="n">1</span> - np.sum((y-yhat)**<span class="n">2</span>)/np.sum((y-y.mean())**<span class="n">2</span>)
+<span class="f">print</span>(<span class="f">round</span>(r2, <span class="n">3</span>))                          <span class="c"># 0.868</span>
+
+<span class="c"># the normal equation gives the same weights</span>
+<span class="f">print</span>(np.allclose(w, np.linalg.inv(X.T&#64;X) &#64; X.T &#64; y))   <span class="c"># True</span></pre>
+<div class="out">[0.989 2.461]
+0.868
+True</div>
+
+<p>And overfitting made numerical — train error keeps falling while test error explodes:</p>
+<pre class="code"><span class="c"># fit polynomials to a noisy sine; train on 40 pts, test on 20</span>
+<span class="k">for</span> deg <span class="k">in</span> [<span class="n">1</span>, <span class="n">3</span>, <span class="n">9</span>, <span class="n">15</span>]:
+    c = np.polyfit(xtr, ytr, deg)
+    train = np.mean((np.polyval(c, xtr)-ytr)**<span class="n">2</span>)
+    test  = np.mean((np.polyval(c, xte)-yte)**<span class="n">2</span>)
+    <span class="f">print</span>(deg, <span class="f">round</span>(train,<span class="n">3</span>), <span class="f">round</span>(test,<span class="n">3</span>))</pre>
+<div class="out">1   0.187        0.556      # underfit: both high
+3   0.067        0.315      # good balance
+9   0.063   222363.81       # overfit: train tiny, test explodes
+15  0.054   276630673496.1  # catastrophic overfit</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>The template for supervised learning.</strong> Logistic regression, neural nets, and more all generalize this: a parameterized prediction, a likelihood-derived loss, fit by optimization.</li>
+  <li><strong>Regularization = variance control.</strong> Ridge adds $\lambda\lVert\mathbf{w}\rVert_2^2$ (an L2 penalty = a Gaussian prior, Session 17) to shrink weights and cut overfitting; lasso (L1) also selects features. The $\lambda$ slides you along the bias–variance curve.</li>
+  <li><strong>Cross-validation</strong> finds the sweet-spot complexity by estimating test error — directly managing bias vs variance.</li>
+  <li><strong>Diagnostics transfer</strong> — residual analysis, $R^2$, and multicollinearity checks (Session 5) are everyday modelling tools.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Linear regression = predict with a dot product, fit by least squares (= Gaussian MLE), judge with $R^2$ and residuals, and control the bias–variance trade-off with model complexity and regularization. It's the whole ML pipeline in miniature.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Collinear features</strong> make $X^\top X$ singular → no unique solution; use ridge or drop features (Session 5).</li>
+  <li><strong>$R^2$ grows with more features</strong> regardless of usefulness — use adjusted $R^2$ or test-set $R^2$.</li>
+  <li><strong>Outliers dominate</strong> squared error; a few points can swing the whole line (consider robust/Huber loss).</li>
+  <li><strong>Extrapolation is dangerous</strong> — a linear fit says nothing reliable beyond the data's range.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Prediction $=\mathbf{w}^\top\mathbf{x}+b$; fit by <strong>minimizing squared error</strong> (= Gaussian MLE).</li>
+  <li>Closed form: <strong>$\hat{\mathbf{w}}=(X^\top X)^{-1}X^\top\mathbf{y}$</strong> — needs full-rank features.</li>
+  <li><strong>$R^2$</strong> = variance explained; always check the <strong>residual plot</strong> too.</li>
+  <li><strong>Bias–variance</strong>: too simple underfits, too flexible overfits; error is a U-curve in complexity.</li>
+  <li><strong>Regularization</strong> (ridge/lasso) trades a little bias for a lot less variance.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · Trusting training R²</span>
+Complex models always fit training data better. A great train $R^2$ with poor test performance is overfitting — evaluate on held-out data / cross-validation.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Ignoring residual patterns</span>
+Curved or fan-shaped residuals mean the linear+Gaussian assumptions are wrong — the coefficients and p-values are then untrustworthy. Plot residuals every time.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Multicollinearity</span>
+Highly correlated predictors make coefficients unstable and $X^\top X$ near-singular. Check correlations/VIF; regularize or drop.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="2">
+  <div class="qz">A degree-15 polynomial has near-zero training error but huge test error. This is…</div>
+  <button class="opt">Underfitting (high bias).</button>
+  <button class="opt">A perfect model.</button>
+  <button class="opt">Overfitting (high variance) — it memorized the training noise.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="1">
+  <div class="qz">Least-squares regression is maximum likelihood under which noise model?</div>
+  <button class="opt">Uniform noise.</button>
+  <button class="opt">Gaussian noise on the targets.</button>
+  <button class="opt">No assumption at all.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code>.</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Fit a line to noisy data with true slope 2.5, intercept 1 via <code>lstsq</code>; recover the coefficients.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">X=np.column_stack([np.ones(n),x])
+np.linalg.lstsq(X,y,rcond=<span class="k">None</span>)[<span class="n">0</span>]   <span class="c"># ~[1.0, 2.5]</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>Compute $R^2$ from residuals and confirm it matches <code>1 - SS_res/SS_tot</code>.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">yhat=X&#64;w; <span class="n">1</span>-np.sum((y-yhat)**<span class="n">2</span>)/np.sum((y-y.mean())**<span class="n">2</span>)</pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>Show the normal equation equals <code>lstsq</code>, and see what happens when you duplicate a feature column (collinearity).</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p>Duplicating a column makes $X^\top X$ singular → <code>inv</code> errors or gives garbage; <code>lstsq</code> still returns a (non-unique) least-norm solution. That's multicollinearity.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>Reproduce the bias–variance table: fit degrees 1, 3, 9, 15 to noisy sine data and print train vs test MSE.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="k">for</span> d <span class="k">in</span> [<span class="n">1</span>,<span class="n">3</span>,<span class="n">9</span>,<span class="n">15</span>]:
+    c=np.polyfit(xtr,ytr,d)
+    <span class="f">print</span>(d, np.mean((np.polyval(c,xtr)-ytr)**<span class="n">2</span>), np.mean((np.polyval(c,xte)-yte)**<span class="n">2</span>))</pre>
+    <p>Train MSE keeps dropping; test MSE bottoms out around degree 3 then explodes — the U-curve.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Add ridge: solve $(X^\top X+\lambda I)^{-1}X^\top y$ for several $\lambda$ on an overfit polynomial and show test error improves then worsens.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code"><span class="k">def</span> <span class="f">ridge</span>(X,y,lam): <span class="k">return</span> np.linalg.solve(X.T&#64;X+lam*np.eye(X.shape[<span class="n">1</span>]), X.T&#64;y)</pre>
+    <p>Small $\lambda$ barely changes the overfit; moderate $\lambda$ tames the wiggles and cuts test error; huge $\lambda$ over-shrinks toward a flat line (back to high bias). $\lambda$ is the bias–variance dial.</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · How is linear regression fit, and how does it relate to MLE?</div><div class="a">By least squares — minimizing the sum of squared residuals, with closed form $\hat w=(X^\top X)^{-1}X^\top y$. This is exactly maximum likelihood assuming Gaussian noise on the targets.</div></div>
+<div class="qa"><div class="q">Q2 · What does R² mean, and its limitations?</div><div class="a">The fraction of target variance explained (1 = perfect, 0 = no better than the mean, can be negative on test data). It always rises with more features, so use adjusted R² and always inspect residuals and test performance.</div></div>
+<div class="qa"><div class="q">Q3 · Explain the bias–variance trade-off.</div><div class="a">Expected error = bias² + variance + irreducible noise. Simple models have high bias (underfit); flexible models have high variance (overfit). Optimal complexity minimizes their sum; regularization and cross-validation manage it.</div></div>
+<div class="qa"><div class="q">Q4 · What assumptions does linear regression make, and how do you check them?</div><div class="a">Linearity, independent errors, constant variance (homoscedasticity), and roughly normal residuals. Check with a residual-vs-fitted plot (should be patternless), a QQ-plot, and multicollinearity diagnostics.</div></div>
+<div class="qa"><div class="q">Q5 · How does ridge regression help?</div><div class="a">It adds an L2 penalty (a Gaussian prior on weights, MAP), shrinking coefficients to reduce variance/overfitting and stabilizing $X^\top X$ under collinearity — trading a little bias for much less variance.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Concept</th><th>Why it matters in ML</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>Linear model / least squares</td><td>The template for supervised learning</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Normal equation = Gaussian MLE</td><td>Ties fitting to probability (Session 17)</td><td class="freq f-h">High</td></tr>
+  <tr><td>R² &amp; residuals</td><td>Judging fit; checking assumptions</td><td class="freq f-h">High</td></tr>
+  <tr><td>Bias–variance</td><td>Under/overfitting — the core ML tension</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>Regularization (ridge/lasso)</td><td>Variance control; the λ dial</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../20_stat_tests/theory.html" style="border:0;color:inherit">20 · Statistical tests: t, χ² & ANOVA →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">Session 16 used a z-test; real data needs the toolbox: the t-distribution for small samples, χ² for categorical data, and ANOVA to compare several groups at once.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 19 — bias–variance: fit a degree-d polynomial to noisy data, watch train vs test
+(function(){
+  const cv=document.getElementById('brplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, PAD=46, CY=H*0.5, YS=H*0.2;
+  let deg=1, data=[];
+  function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+  const px=x=>PAD+x*(W-2*PAD), py=v=>CY-v*YS;
+
+  function gen(){ data=[]; const xs=Array.from({length:30},()=>Math.random()).sort((a,b)=>a-b);
+    xs.forEach((x,i)=>data.push({x, y:Math.sin(2*Math.PI*x)+0.2*randn(), test:(i%3===0)})); }
+  function solve(A,b){ // Gaussian elimination with partial pivoting
+    const n=b.length, M=A.map((r,i)=>r.concat(b[i]));
+    for(let c=0;c<n;c++){ let p=c; for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+      [M[c],M[p]]=[M[p],M[c]]; const pivot=M[c][c]||1e-9;
+      for(let r=0;r<n;r++){ if(r===c)continue; const f=M[r][c]/pivot; for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k]; } }
+    return M.map((r,i)=>r[n]/(r[i]||1e-9)); }
+  function polyfit(pts,d){ // returns coefficients c[0..d]
+    const V=pts.map(p=>{const row=[]; let xk=1; for(let k=0;k<=d;k++){row.push(xk); xk*=p.x;} return row;});
+    const A=Array.from({length:d+1},()=>new Array(d+1).fill(0)), b=new Array(d+1).fill(0);
+    for(let i=0;i<=d;i++){ for(let j=0;j<=d;j++){ let s=0; V.forEach(r=>s+=r[i]*r[j]); A[i][j]=s+(i===j?1e-7:0); }
+      let sb=0; V.forEach((r,ri)=>sb+=r[i]*pts[ri].y); b[i]=sb; }
+    return solve(A,b); }
+  const polyval=(c,x)=>{let s=0,xk=1; for(let k=0;k<c.length;k++){s+=c[k]*xk; xk*=x;} return s;};
+  const mse=(c,pts)=>pts.reduce((a,p)=>a+(polyval(c,p.x)-p.y)**2,0)/pts.length;
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(PAD,py(0));ctx.lineTo(W-PAD,py(0));ctx.stroke();
+    const tr=data.filter(p=>!p.test), te=data.filter(p=>p.test);
+    const c=polyfit(tr,deg);
+    // fitted curve
+    ctx.strokeStyle='#B07514';ctx.lineWidth=3;ctx.beginPath();
+    for(let i=0;i<=200;i++){const x=i/200, y=Math.max(-3,Math.min(3,polyval(c,x))); i?ctx.lineTo(px(x),py(y)):ctx.moveTo(px(x),py(y));}
+    ctx.stroke();
+    // points
+    tr.forEach(p=>{ctx.fillStyle='#5A4FCF';ctx.beginPath();ctx.arc(px(p.x),py(p.y),4,0,7);ctx.fill();});
+    te.forEach(p=>{ctx.fillStyle='#C13A57';ctx.beginPath();ctx.arc(px(p.x),py(p.y),4,0,7);ctx.fill();});
+    upd(mse(c,tr), mse(c,te));
+  }
+  function upd(trE,teE){
+    const r=v=>v>=1000?v.toExponential(1):Math.round(v*1000)/1000, el=id=>document.getElementById(id);
+    el('rTrain').textContent=r(trE); el('rTest').textContent=r(teE); el('rDeg').textContent=deg;
+    const f=el('rFit');
+    if(deg<=1){f.textContent='underfit (high bias)';f.style.color='#C13A57';}
+    else if(deg<=5){f.textContent='good balance ✓';f.style.color='#0E8C80';}
+    else{f.textContent='overfit (high variance)';f.style.color='#C13A57';}
+  }
+  const sl=document.getElementById('sDeg'); if(sl) sl.addEventListener('input',()=>{deg=parseInt(sl.value);draw();});
+  const b=document.getElementById('brBtn'); if(b) b.addEventListener('click',()=>{gen();draw();});
+  gen(); draw();
+})();
+</script>
+</body>
+</html>

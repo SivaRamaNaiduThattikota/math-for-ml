@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>try{var _t=localStorage.getItem('mfml-theme')||'glass';if(_t!=='light')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<title>Statistical tests: t, χ² & ANOVA · Math for ML</title>
+<meta name="description" content="Beyond the z-test: the t-distribution for small samples, χ² for categorical data, and ANOVA to compare several group means at once.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Statistical tests: t, χ² & ANOVA · Math for ML">
+<meta property="og:description" content="Beyond the z-test: the t-distribution for small samples, χ² for categorical data, and ANOVA to compare several group means at once.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235A4FCF'/%3E%3Cpath d='M9 22 L20 10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='10' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/vendor/katex/katex.min.css">
+<script defer src="../assets/vendor/katex/katex.min.js"></script>
+<script defer src="../assets/vendor/katex/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<link rel="stylesheet" href="../assets/theory.css">
+</head>
+<body data-slug="20_stat_tests">
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="cap">On this page</div>
+  <a href="#s1">1 · The t-distribution</a>
+  <a href="#s2">2 · t-tests</a>
+  <a href="#s3">3 · χ² tests</a>
+  <a href="#s4">4 · ANOVA</a>
+  <a href="#s5">5 · SciPy</a>
+  <a href="#s6">6 · Inside ML</a>
+  <a href="#ref">Rules & traps</a>
+  <a href="#exercises">Exercises</a>
+  <a href="#interview">Interview</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="scrollbtns">
+  <button id="goTop" aria-label="Scroll to top">↑</button>
+  <button id="goBottom" aria-label="Scroll to bottom">↓</button>
+</div>
+
+<header class="hero">
+  <div class="page"><div class="hero-inner">
+    <div class="eyebrow">Math for ML · Applied Statistics · 20</div>
+    <h1>Statistical tests: t, χ² & ANOVA</h1>
+    <p class="lede">Beyond the z-test: the t-distribution for small samples, χ² for categorical data, and ANOVA to compare several group means at once.</p>
+    <div class="meta"><span>~20 min read</span><span class="dot"></span><span>NumPy + SciPy notebook</span><span class="dot"></span><span>Prereq: Inference</span></div>
+  </div></div>
+</header>
+
+<div class="page">
+<article>
+<p class="dropcap">Session 16 tested a proportion with a z-test — but real data rarely fits that mold. You usually <em>don't know the true variance</em>, your samples are <em>small</em>, your data is <em>categorical</em>, or you're comparing <em>more than two</em> groups. Each case has its own tool: the <strong>t-test</strong> for means with unknown variance, the <strong>χ² test</strong> for counts and categories, and <strong>ANOVA</strong> for many groups at once. This session is the working data scientist's testing toolbox.</p>
+
+<div class="objectives">
+  <div class="lbl">By the end you will be able to</div>
+  <ul>
+    <li>Explain the <strong>t-distribution</strong> and why small samples need it instead of the normal.</li>
+    <li>Choose and run a <strong>one-sample, two-sample, or paired t-test</strong>.</li>
+    <li>Use the <strong>χ² test</strong> for goodness-of-fit and independence (contingency tables).</li>
+    <li>Use <strong>ANOVA</strong> to compare several group means — and know why not to run many t-tests.</li>
+    <li>Pick the right test for a given question, in SciPy.</li>
+  </ul>
+</div>
+
+<div class="mmlbar">
+  <span class="bk">📖</span>
+  <div><b>Companion reference.</b> Applied statistics beyond <a href="https://mml-book.com" target="_blank" rel="noopener"><em>Mathematics for Machine Learning</em></a>'s core — the classical hypothesis-test toolbox (t / χ² / F) that DS interviews expect. Builds directly on Sessions 15–16.</div>
+</div>
+
+<nav class="secnav" aria-label="Jump to section">
+  <a href="#s1"><span class="n">01</span><span class="t">The t-distribution</span></a>
+  <a href="#s2"><span class="n">02</span><span class="t">t-tests</span></a>
+  <a href="#s3"><span class="n">03</span><span class="t">χ² tests</span></a>
+  <a href="#s4"><span class="n">04</span><span class="t">ANOVA</span></a>
+  <a href="#s5"><span class="n">05</span><span class="t">SciPy</span></a>
+  <a href="#s6"><span class="n">06</span><span class="t">Inside ML</span></a>
+  <a href="#exercises"><span class="n">▷</span><span class="t">Exercises + solutions</span></a>
+  <a href="#interview"><span class="n">▷</span><span class="t">Interview questions</span></a>
+</nav>
+
+<details class="notation">
+  <summary>Notation reference</summary>
+  <div class="notation-grid">
+    <span class="sym">$t$</span><span class="def">Test statistic / the t-distribution (heavier-tailed than normal).</span>
+    <span class="sym">df / $\nu$</span><span class="def">Degrees of freedom — governs the t and χ² shapes.</span>
+    <span class="sym">$\chi^2$</span><span class="def">Chi-square statistic — for counts / categorical data.</span>
+    <span class="sym">$F$</span><span class="def">ANOVA statistic — ratio of between- to within-group variance.</span>
+    <span class="sym">$p$</span><span class="def">p-value — same meaning as Session 16.</span>
+  </div>
+</details>
+
+<!-- ═════════ 1 ═════════ -->
+<h2 id="s1"><span class="num">Section 1</span>The t-distribution — small samples, unknown variance</h2>
+
+<p>The z-test assumed you knew the population standard deviation $\sigma$. In practice you <em>estimate</em> it from the sample, and that estimate is itself noisy — especially with few data points. To account for that extra uncertainty, you use the <strong>t-distribution</strong> instead of the normal. It looks like a bell but with <strong>heavier tails</strong>: extreme values are more likely, so it's more cautious about declaring significance.</p>
+
+<p>Its shape is set by the <strong>degrees of freedom</strong> (df $= n-1$ for one sample). Low df → fat tails (small, uncertain sample); as df grows, the t-distribution <strong>converges to the normal</strong> (by ~df = 30 they're nearly identical — the CLT again). Slide df below and watch it happen.</p>
+
+<figure class="fig">
+  <div class="frame">
+    <canvas id="tplay" width="880" height="380"></canvas>
+    <div class="ctrlrow"><span class="lbl2">degrees of freedom:</span>
+      <input type="range" id="sDf" min="1" max="30" step="1" value="3" style="flex:1;accent-color:var(--accent);max-width:340px;"><span id="rDf" class="vd">3</span></div>
+    <div class="readout">
+      <span><span class="va">▬ t-distribution</span></span>
+      <span><span class="vs">▬ standard normal</span></span>
+      <span id="rNote" class="vd">…</span>
+    </div>
+  </div>
+  <figcaption><strong>Figure 1 — t vs normal.</strong> The amber curve is the t-distribution with your chosen df; the indigo curve is the standard normal. At low df the t has a <b>lower peak and fatter tails</b> — it expects more extreme values, so it needs a bigger statistic to reach significance. Raise df toward 30 and the two curves become indistinguishable.</figcaption>
+</figure>
+
+<div class="callout c-anchor"><span class="tag">Your Power BI / SQL anchor</span>
+Comparing this quarter's average deal size to last quarter's, on 12 deals each? That's a small-sample, unknown-variance comparison — a <strong>t-test</strong>, not a z-test. The t-distribution is what keeps you honest when you don't have thousands of rows.</div>
+
+<!-- ═════════ 2 ═════════ -->
+<h2 id="s2"><span class="num">Section 2</span>t-tests — comparing means</h2>
+
+<p>Three flavours cover most "did the average change?" questions:</p>
+<ul>
+  <li><strong>One-sample t-test</strong> — is a sample's mean different from a known value? ("Is average session time ≠ 5 min?")</li>
+  <li><strong>Two-sample (independent) t-test</strong> — do two separate groups have different means? (control vs treatment — the A/B test for a continuous metric)</li>
+  <li><strong>Paired t-test</strong> — same subjects measured twice (before/after); tests the mean <em>difference</em>. More powerful when it applies, because it removes between-subject variation.</li>
+</ul>
+<p>Each computes a t-statistic (effect ÷ its standard error) and a p-value from the t-distribution. It assumes roughly normal data (or large enough $n$ via the CLT) and, for the two-sample version, comparable variances.</p>
+
+<!-- ═════════ 3 ═════════ -->
+<h2 id="s3"><span class="num">Section 3</span>χ² tests — for counts and categories</h2>
+
+<p>t-tests are for means of continuous data. When your data is <strong>categorical counts</strong>, use the <strong>chi-square ($\chi^2$) test</strong>, which compares <em>observed</em> counts to <em>expected</em> ones:</p>
+<div class="mathband">$$ \chi^2 = \sum \frac{(\text{observed}-\text{expected})^2}{\text{expected}} $$</div>
+<ul>
+  <li><strong>Goodness-of-fit</strong> — does one categorical variable match an expected distribution? ("Is this die fair?" — compare roll counts to uniform.)</li>
+  <li><strong>Test of independence</strong> — are two categorical variables related? Build a <strong>contingency table</strong> (e.g. device × converted?) and test whether the rows and columns are independent.</li>
+</ul>
+<p>Big χ² (observed far from expected) → small p → reject "they match / are independent."</p>
+
+<!-- ═════════ 4 ═════════ -->
+<h2 id="s4"><span class="num">Section 4</span>ANOVA — comparing several groups at once</h2>
+
+<p>To compare the means of <strong>three or more</strong> groups, don't run a t-test on every pair — that's multiple comparisons and inflates false positives (Session 16). Instead use <strong>ANOVA</strong> (Analysis of Variance), which asks one question: "is there <em>any</em> difference among the group means?" via the <strong>F-statistic</strong>:</p>
+<div class="mathband">$$ F = \frac{\text{variance between groups}}{\text{variance within groups}} $$</div>
+<p>If the groups truly differ, the between-group variance dwarfs the within-group noise, so $F$ is large and $p$ is small. A significant ANOVA says "the groups aren't all equal"; you then use <em>post-hoc</em> tests (with correction) to find <em>which</em> pairs differ.</p>
+
+<!-- ═════════ 5 ═════════ -->
+<h2 id="s5"><span class="num">Section 5</span>In SciPy <span style="font-size:.7rem;color:var(--teal)">✓ outputs verified</span></h2>
+
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">from</span> scipy <span class="k">import</span> stats
+rng = np.random.default_rng(<span class="n">1</span>)
+
+<span class="c"># two-sample t-test: control vs treatment</span>
+a = rng.normal(<span class="n">100</span>, <span class="n">15</span>, <span class="n">30</span>); b = rng.normal(<span class="n">108</span>, <span class="n">15</span>, <span class="n">30</span>)
+t, p = stats.ttest_ind(a, b)
+<span class="f">print</span>(<span class="f">round</span>(t,<span class="n">3</span>), <span class="f">round</span>(p,<span class="n">4</span>))          <span class="c"># -2.505 0.0151  -> B significantly higher</span>
+
+<span class="c"># chi-square goodness of fit: is the die fair?</span>
+obs = np.array([<span class="n">16</span>,<span class="n">18</span>,<span class="n">16</span>,<span class="n">14</span>,<span class="n">22</span>,<span class="n">14</span>])     <span class="c"># 100 rolls</span>
+<span class="f">print</span>(np.round(stats.chisquare(obs), <span class="n">4</span>))  <span class="c"># chi2=2.72, p=0.7431 -> fair (fail to reject)</span>
+
+<span class="c"># chi-square independence: device x converted?</span>
+table = np.array([[<span class="n">30</span>,<span class="n">10</span>],[<span class="n">20</span>,<span class="n">40</span>]])
+chi2, pi, dof, _ = stats.chi2_contingency(table)
+<span class="f">print</span>(<span class="f">round</span>(chi2,<span class="n">3</span>), <span class="f">round</span>(pi,<span class="n">5</span>))     <span class="c"># 15.042 0.00011 -> dependent</span>
+
+<span class="c"># ANOVA: three groups</span>
+g1=rng.normal(<span class="n">50</span>,<span class="n">5</span>,<span class="n">20</span>); g2=rng.normal(<span class="n">52</span>,<span class="n">5</span>,<span class="n">20</span>); g3=rng.normal(<span class="n">58</span>,<span class="n">5</span>,<span class="n">20</span>)
+<span class="f">print</span>(np.round(stats.f_oneway(g1,g2,g3), <span class="n">4</span>))  <span class="c"># F=24.55, p~0 -> groups differ</span></pre>
+<div class="out">-2.505 0.0151
+[2.72   0.7431]
+15.042 0.00011
+[24.5543  0.    ]</div>
+
+<div class="callout c-warn"><span class="tag">Assumptions still matter</span>
+These tests assume (roughly) normal data / large samples, and — for two-sample t and ANOVA — comparable variances. Heavy skew, outliers, or wildly unequal spreads call for variants (Welch's t-test, which SciPy uses with <code>equal_var=False</code>) or non-parametric tests (Mann–Whitney, Kruskal–Wallis). Check before you trust the p-value.</div>
+
+<!-- ═════════ 6 ═════════ -->
+<h2 id="s6"><span class="num">Section 6</span>Where it lives in real ML</h2>
+<ul>
+  <li><strong>A/B tests on continuous metrics</strong> (time-on-page, revenue-per-user) use a <strong>t-test</strong>; on rates, the z-test (Session 16).</li>
+  <li><strong>χ² independence</strong> screens whether a categorical feature relates to the target — a quick feature-relevance check.</li>
+  <li><strong>ANOVA</strong> compares more than two model variants or segments in one shot, controlling false positives vs many pairwise tests.</li>
+  <li><strong>Model comparison</strong> across CV folds is often a <strong>paired t-test</strong> (same folds, two models) — more powerful because it removes fold-to-fold variation.</li>
+</ul>
+<div class="callout c-why"><span class="tag">The one-line takeaway</span>
+Match the test to the data: <b>t</b> for means (small samples / unknown variance), <b>χ²</b> for categorical counts, <b>ANOVA</b> for many groups. All produce a statistic and a p-value read exactly as in Session 16 — just with the right sampling distribution.</div>
+
+<hr class="divider">
+
+<!-- ═════════ REFERENCE ═════════ -->
+<h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
+
+<h3>Edge cases &amp; gotchas</h3>
+<ul>
+  <li><strong>Use t, not z, for small samples</strong> with estimated variance — the fat tails guard against over-confidence.</li>
+  <li><strong>Paired vs independent</strong> — using an independent t-test on paired data throws away power (and can mislead).</li>
+  <li><strong>χ² needs adequate expected counts</strong> (rule of thumb ≥5 per cell); tiny counts need Fisher's exact test.</li>
+  <li><strong>ANOVA finds <em>a</em> difference, not which</strong> — follow with corrected post-hoc comparisons.</li>
+</ul>
+
+<h3>Golden rules</h3>
+<ol class="rules">
+  <li>Unknown variance + small $n$ → the <strong>t-distribution</strong> (df = $n-1$); → normal as df grows.</li>
+  <li><strong>t-tests</strong> compare means: one-sample, two-sample (A/B), paired (before/after).</li>
+  <li><strong>χ²</strong> for categorical counts: goodness-of-fit and independence (contingency tables).</li>
+  <li><strong>ANOVA</strong> (F-test) compares ≥3 group means at once — avoid many pairwise t-tests.</li>
+  <li>Every test → a statistic + a p-value; check assumptions before trusting it.</li>
+</ol>
+
+<div class="callout c-trap"><span class="tag">Trap 1 · z-test on a tiny sample</span>
+With few points and an estimated σ, the normal is over-confident. Use the t-test; its heavier tails demand stronger evidence.</div>
+<div class="callout c-trap"><span class="tag">Trap 2 · Many pairwise t-tests instead of ANOVA</span>
+Comparing k groups pairwise multiplies false positives. Run ANOVA first; only if significant, do corrected post-hoc pairs.</div>
+<div class="callout c-trap"><span class="tag">Trap 3 · Ignoring test assumptions</span>
+Unequal variances, heavy skew, or paired structure change which test is valid. Use Welch's t, non-parametric tests, or the paired version as appropriate.</div>
+
+<hr class="divider">
+
+<h3>Quick self-check</h3>
+<div class="quiz" data-answer="1">
+  <div class="qz">You compare average order value between two customer groups, 15 orders each, unknown variance. Which test?</div>
+  <button class="opt">z-test.</button>
+  <button class="opt">Two-sample t-test (small samples, unknown variance).</button>
+  <button class="opt">χ² test.</button>
+  <div class="fb"></div>
+</div>
+<div class="quiz" data-answer="2">
+  <div class="qz">You want to know if conversion depends on device type (mobile/desktop/tablet). Which test?</div>
+  <button class="opt">ANOVA.</button>
+  <button class="opt">Paired t-test.</button>
+  <button class="opt">χ² test of independence on the contingency table.</button>
+  <div class="fb"></div>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ EXERCISES ═════════ -->
+<h2 id="exercises"><span class="num">Practice</span>Exercises</h2>
+<p style="color:var(--muted); font-size:.95rem;">Hints only — solve in the paired <code>practice.ipynb</code> (uses SciPy).</p>
+
+<div class="ex"><span class="h">E1</span><span class="pill p-e">easy</span><p>Two-sample t-test on <code>N(100,15)</code> vs <code>N(108,15)</code>, 30 each. Significant at 0.05?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">stats.ttest_ind(a,b)   <span class="c"># t=-2.505, p=0.0151 -> yes, significant</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E2</span><span class="pill p-e">easy</span><p>χ² goodness-of-fit on die counts <code>[16,18,16,14,22,14]</code>. Fair?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">stats.chisquare([<span class="n">16</span>,<span class="n">18</span>,<span class="n">16</span>,<span class="n">14</span>,<span class="n">22</span>,<span class="n">14</span>])   <span class="c"># chi2=2.72, p=0.74 -> fair</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E3</span><span class="pill p-m">medium</span><p>χ² independence on the table <code>[[30,10],[20,40]]</code>. Are the variables related?</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">stats.chi2_contingency([[<span class="n">30</span>,<span class="n">10</span>],[<span class="n">20</span>,<span class="n">40</span>]])[:<span class="n">2</span>]   <span class="c"># chi2=15.04, p=0.00011 -> dependent</span></pre>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E4</span><span class="pill p-m">medium</span><p>ANOVA on three groups with means 50, 52, 58 (std 5, n=20). Then explain why you wouldn't just t-test all pairs.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <p><code>stats.f_oneway(g1,g2,g3)</code> → F≈24.6, p≈0. Three pairwise t-tests would be 3 chances at a false positive; ANOVA asks once, controlling α.</p>
+  </div></details>
+</div>
+
+<div class="ex"><span class="h">E5</span><span class="pill p-h">hard</span><p>Empirically show the t-distribution → normal: overlay <code>stats.t.pdf(x, df)</code> for df = 1, 5, 30 against <code>stats.norm.pdf(x)</code>.</p>
+  <details class="sol"><summary>Show solution</summary><div class="sol-body">
+    <pre class="code">x=np.linspace(<span class="n">-4</span>,<span class="n">4</span>,<span class="n">200</span>)
+[stats.t.pdf(<span class="n">0</span>,df) <span class="k">for</span> df <span class="k">in</span> (<span class="n">1</span>,<span class="n">5</span>,<span class="n">30</span>)], stats.norm.pdf(<span class="n">0</span>)   <span class="c"># peak rises toward 0.399</span></pre>
+    <p>Low df has a lower peak and fatter tails; by df=30 it's essentially the normal (peak ≈ 0.399).</p>
+  </div></details>
+</div>
+
+<hr class="divider">
+
+<!-- ═════════ INTERVIEW ═════════ -->
+<h2 id="interview"><span class="num">Interview</span>Questions you should be able to answer</h2>
+<div class="qa"><div class="q">Q1 · When do you use a t-test instead of a z-test?</div><div class="a">When the population variance is unknown (estimated from the sample) and/or the sample is small. The t-distribution's heavier tails account for the extra uncertainty; it converges to the normal as df grows.</div></div>
+<div class="qa"><div class="q">Q2 · One-sample vs two-sample vs paired t-test?</div><div class="a">One-sample: mean vs a known value. Two-sample: two independent groups' means. Paired: same subjects measured twice (tests the mean difference) — more powerful when applicable.</div></div>
+<div class="qa"><div class="q">Q3 · What is a χ² test for?</div><div class="a">Categorical counts: goodness-of-fit (does one variable match an expected distribution) and independence (are two categorical variables related, via a contingency table).</div></div>
+<div class="qa"><div class="q">Q4 · Why ANOVA instead of many t-tests?</div><div class="a">To compare ≥3 groups while controlling the false-positive rate. Many pairwise tests inflate Type I error; ANOVA's single F-test asks "are any means different?" first.</div></div>
+<div class="qa"><div class="q">Q5 · How do you compare two models across CV folds?</div><div class="a">A paired t-test on the per-fold scores (same folds, two models) — pairing removes fold-to-fold variance, increasing power.</div></div>
+
+<hr class="divider">
+
+<!-- ═════════ SUMMARY ═════════ -->
+<h2 id="summary"><span class="num">Recap</span>Summary</h2>
+<table class="sum">
+  <thead><tr><th>Test</th><th>Use it for</th><th>Interview freq.</th></tr></thead>
+  <tbody>
+  <tr><td>t-distribution</td><td>Small samples, unknown variance</td><td class="freq f-h">High</td></tr>
+  <tr><td>t-test (1/2-sample, paired)</td><td>Comparing means; A/B on continuous metrics</td><td class="freq f-vh">Very high</td></tr>
+  <tr><td>χ² goodness-of-fit / independence</td><td>Categorical counts; feature relevance</td><td class="freq f-h">High</td></tr>
+  <tr><td>ANOVA (F-test)</td><td>≥3 groups at once; avoid multiple t-tests</td><td class="freq f-h">High</td></tr>
+  </tbody>
+</table>
+
+<div class="next">
+  <span class="lbl">Next session</span>
+  <h3><a href="../21_bayesian_inference/theory.html" style="border:0;color:inherit">21 · Bayesian inference & conjugate priors →</a></h3>
+  <p style="margin:6px 0 0; color:var(--muted);">The other school of inference: instead of p-values, carry a full distribution of belief and update it with data — cleanly, via conjugate priors like the Beta-Binomial.</p>
+</div>
+</article>
+</div>
+
+<script src="../assets/sessions.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+// Session 20 — t-distribution vs standard normal, df slider
+(function(){
+  const cv=document.getElementById('tplay'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, PAD=46, BASE=H-40, XR=4.2, YS=(BASE-30)/0.42;
+  let df=3;
+  const px=x=>W/2 + x/XR*(W/2-PAD);
+  const py=v=>BASE - v*YS;
+  const normpdf=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+  function tpdf(nu){ // numerically normalized t density over the grid
+    const xs=[], u=[]; let area=0; const dx=8.4/400;
+    for(let i=0;i<=400;i++){const x=-4.2+i*dx; xs.push(x); const v=Math.pow(1+x*x/nu, -(nu+1)/2); u.push(v); area+=v*dx;}
+    return {xs, d:u.map(v=>v/area)};
+  }
+  function curve(fn,col){ ctx.strokeStyle=col;ctx.lineWidth=3;ctx.beginPath();
+    for(let i=0;i<=200;i++){const x=-XR+i/200*2*XR; const y=py(fn(x)); i?ctx.lineTo(px(x),y):ctx.moveTo(px(x),y);} ctx.stroke(); }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#C9C4B6';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(PAD,BASE);ctx.lineTo(W-PAD,BASE);ctx.stroke();
+    ctx.fillStyle='#8A8698';ctx.font='11px "JetBrains Mono",monospace';ctx.textAlign='center';
+    for(let k=-4;k<=4;k++)ctx.fillText(String(k),px(k),BASE+18);
+    // t (numerical) — build a lookup then interpolate
+    const t=tpdf(df);
+    const tval=x=>{ const idx=Math.min(400,Math.max(0,Math.round((x+4.2)/8.4*400))); return t.d[idx]; };
+    curve(normpdf,'#5A4FCF');   // standard normal
+    curve(tval,'#B07514');      // t
+    upd();
+  }
+  function upd(){
+    document.getElementById('rDf').textContent=df;
+    const n=document.getElementById('rNote');
+    if(df<=3){n.textContent='low df: fat tails, lower peak';n.style.color='#C13A57';}
+    else if(df<15){n.textContent='approaching normal…';n.style.color='var(--muted)';}
+    else{n.textContent='≈ normal (df large) ✓';n.style.color='#0E8C80';}
+  }
+  const sl=document.getElementById('sDf'); if(sl) sl.addEventListener('input',()=>{df=parseInt(sl.value);draw();});
+  draw();
+})();
+</script>
+</body>
+</html>
