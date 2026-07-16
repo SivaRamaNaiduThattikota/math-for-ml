@@ -318,6 +318,18 @@ np.linalg.matrix_rank(np.array([[<span class="n">1</span>,<span class="n">0</spa
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">Rank is how many directions a matrix really has.</div>
+  <p><span class="cc-sub">Reusable idea:</span> Span, basis, and rank describe the true dimensionality hiding inside your data.</p>
+  <ul>
+    <li><strong>Span</strong> = everything you can reach by combining vectors; a <strong>basis</strong> is a minimal spanning set.</li>
+    <li><strong>Rank</strong> = number of independent directions = dimension of the span.</li>
+    <li><strong>Low rank / collinearity</strong> = redundant features = a singular $A^\top A$.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> rank tells you how much genuinely independent information is present — the seed of PCA, compression, and multicollinearity.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Next session</span>
   <h3><a href="../06_eigenvalues/theory.html" style="border:0;color:inherit">06 · Eigenvalues & eigenvectors →</a></h3>

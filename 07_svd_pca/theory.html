@@ -327,6 +327,18 @@ np.cumsum(ratio)     <span class="c"># find the first index >= 0.90</span></pre>
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">SVD factors any matrix into rotate – scale – rotate.</div>
+  <p><span class="cc-sub">Reusable idea:</span> $A = U\Sigma V^\top$ is the master decomposition behind PCA, recommenders, and LoRA.</p>
+  <ul>
+    <li><strong>Singular values</strong> rank directions by importance; keep the top-$k$ for the best low-rank approximation.</li>
+    <li><strong>PCA</strong> = SVD of centered data = eigendecomposition of the covariance.</li>
+    <li>Works for <strong>any</strong> matrix (non-square, non-symmetric).</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> compress, denoise, and find structure by keeping only the directions that carry the variance — that is SVD everywhere.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Next pillar</span>
   <h3><a href="../08_derivatives/theory.html" style="border:0;color:inherit">08 · Derivatives & gradients →</a></h3>

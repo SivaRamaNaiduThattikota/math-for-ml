@@ -319,6 +319,18 @@ np.linalg.matrix_power(R, <span class="n">4</span>)   <span class="c"># [[1 0] [
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">Multiplying matrices = composing transformations.</div>
+  <p><span class="cc-sub">Reusable idea:</span> $AB$ means ‘do B, then A’ — the single most-run operation in ML.</p>
+  <ul>
+    <li><strong>Not commutative</strong>: $AB\neq BA$ (order of operations matters).</li>
+    <li><strong>Inner dimensions must match</strong>; the result is outer×outer — shape-check first.</li>
+    <li>A neural layer is <strong>matrix×input + bias</strong>, repeated.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> every forward pass is a chain of matrix multiplies — composition of transformations, executed billions of times.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Next session</span>
   <h3><a href="../05_span_basis_rank/theory.html" style="border:0;color:inherit">05 · Span, basis, rank &amp; independence →</a></h3>

@@ -450,3 +450,18 @@
     font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--ink);}
   .ctrl:hover{border-color:var(--accent);}
   .ctrl.active{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600;}
+
+  /* ═══════════ concept card — the memorable takeaway that closes every lesson ═══════════ */
+  .conceptcard{border:2px solid var(--amber); background:var(--amber-soft); border-radius:16px;
+    padding:22px 26px; margin:40px 0 12px; line-height:1.62;}
+  .conceptcard .cc-label{font-family:'JetBrains Mono',monospace; font-size:.66rem; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--amber); display:block; margin-bottom:8px;}
+  .conceptcard .cc-title{font-family:'Fraunces',serif; font-weight:600; font-size:1.4rem; color:var(--ink-strong);
+    letter-spacing:-.012em; margin:0 0 14px; line-height:1.15;}
+  .conceptcard .cc-sub{font-weight:600; color:var(--ink-strong);}
+  .conceptcard ul{margin:8px 0;}
+  .conceptcard .cc-hook{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule);}
+  .conceptcard .cc-hook b{color:var(--ink-strong);}
+  [data-theme="glass"] .conceptcard{ -webkit-backdrop-filter:blur(18px) saturate(180%); backdrop-filter:blur(18px) saturate(180%);
+    border-color:color-mix(in srgb, var(--amber) 60%, transparent);
+    box-shadow:0 10px 34px rgba(38,26,76,.12), inset 0 1px 0 rgba(255,255,255,.6);}

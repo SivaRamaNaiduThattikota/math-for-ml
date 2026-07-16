@@ -307,6 +307,18 @@ CE=-np.sum(p*np.log2(q+<span class="n">1e-12</span>)); CE, -np.log2(<span class=
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">Information theory measures surprise.</div>
+  <p><span class="cc-sub">Reusable idea:</span> Entropy, cross-entropy, and KL quantify uncertainty and the cost of being wrong.</p>
+  <ul>
+    <li><strong>Entropy</strong> = average surprise of a distribution.</li>
+    <li><strong>Cross-entropy = entropy + KL</strong>; KL is the extra bits from using the wrong distribution.</li>
+    <li><strong>KL(p∥q)</strong> is asymmetric and ≥ 0.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> minimizing cross-entropy = minimizing KL to the truth — the same objective behind classifiers, VAEs, and distillation.</div>
+</div>
+
 <div class="next">
   <span class="lbl">🎓 Course complete</span>
   <h3><a href="../index.html" style="border:0;color:inherit">You've finished all 18 sessions →</a></h3>

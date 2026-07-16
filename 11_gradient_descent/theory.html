@@ -323,6 +323,18 @@ w   <span class="c"># reaches ~3 faster (may overshoot then settle)</span></pre>
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">Descend the gradient, one small step at a time.</div>
+  <p><span class="cc-sub">Reusable idea:</span> Repeatedly step against the gradient to minimize a loss.</p>
+  <ul>
+    <li><strong>θ ← θ − η∇L</strong>; the learning rate η sets step size.</li>
+    <li><strong>Convex</strong> → one global min; non-convex → local minima &amp; saddles.</li>
+    <li><strong>SGD</strong> uses noisy mini-batch gradients — cheaper and often generalizes better.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> almost every model you will ever train is fit by this loop — compute a slope, take a step, repeat.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Next pillar</span>
   <h3><a href="../12_probability_bayes/theory.html" style="border:0;color:inherit">12 · Probability & Bayes →</a></h3>

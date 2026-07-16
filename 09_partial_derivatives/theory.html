@@ -318,6 +318,18 @@ h=<span class="n">1e-5</span>; F=<span class="k">lambda</span> x,y:np.array([x*x
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">The gradient points uphill in every dimension at once.</div>
+  <p><span class="cc-sub">Reusable idea:</span> Partial derivatives measure slope in each axis; stacked, they form the gradient vector.</p>
+  <ul>
+    <li><strong>∇f</strong> points in the direction of steepest ascent; $-\nabla f$ is steepest descent.</li>
+    <li>The <strong>Jacobian</strong> stacks gradients of a vector output.</li>
+    <li>Gradient magnitude = how steep; direction = where.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> the gradient is the compass of optimization — every parameter update reads it to decide where to step.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Next session</span>
   <h3><a href="../10_chain_rule_backprop/theory.html" style="border:0;color:inherit">10 · Chain rule & backprop →</a></h3>

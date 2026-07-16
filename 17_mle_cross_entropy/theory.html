@@ -312,6 +312,18 @@ mus[np.argmin([((x-m)**<span class="n">2</span>).sum() <span class="k">for</span
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">Loss functions come from maximizing likelihood.</div>
+  <p><span class="cc-sub">Reusable idea:</span> Fitting a model = making the observed data most probable under it.</p>
+  <ul>
+    <li><strong>MLE</strong>: choose parameters that maximize the likelihood.</li>
+    <li><strong>−log-likelihood</strong> turns products into sums — the loss you minimize.</li>
+    <li><strong>Cross-entropy</strong> is exactly the negative log-likelihood of a classifier.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> cross-entropy and MSE are not arbitrary — they are maximum likelihood in disguise, which is why they are the right losses.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Final session</span>
   <h3><a href="../18_information_theory/theory.html" style="border:0;color:inherit">18 · Information theory →</a></h3>

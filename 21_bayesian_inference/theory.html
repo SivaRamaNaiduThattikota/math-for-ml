@@ -310,6 +310,18 @@ picks.count(<span class="s">'B'</span>)/<span class="n">10000</span>   <span cla
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">Priors + data = posterior; conjugacy makes it easy.</div>
+  <p><span class="cc-sub">Reusable idea:</span> Bayesian inference updates a full distribution over parameters, not just a point.</p>
+  <ul>
+    <li><strong>Conjugate priors</strong> (Beta–Binomial, Gamma–Poisson) keep the posterior in the same family — closed-form updates.</li>
+    <li>The prior <strong>washes out</strong> as data grows.</li>
+    <li>You get <strong>credible intervals</strong> and honest uncertainty, not just an estimate.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> when data is scarce or uncertainty matters (bandits, A/B, forecasting), reasoning over the whole posterior beats a single number.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Finale</span>
   <h3><a href="../22_capstone/theory.html" style="border:0;color:inherit">★ Capstone: the whole spine →</a></h3>

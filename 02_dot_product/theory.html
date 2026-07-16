@@ -411,6 +411,18 @@ Clamp with <code>np.clip(c, -1, 1)</code> first.</div>
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">The dot product turns “aligned” into a number.</div>
+  <p><span class="cc-sub">Reusable idea:</span> One multiply-and-sum measures how much two vectors point the same way.</p>
+  <ul>
+    <li><strong>a·b = ‖a‖‖b‖cos θ</strong> — sign tells you same / opposite / perpendicular.</li>
+    <li><strong>Zero dot product = orthogonal</strong>; that is the whole idea of ‘unrelated directions’.</li>
+    <li><strong>Cosine similarity</strong> normalizes it — the backbone of search, recommenders, and attention.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> similarity, projection, and the core of attention are all one dot product asking ‘how aligned?’</div>
+</div>
+
 <div class="next">
   <span class="lbl">Next session</span>
   <h3><a href="../03_matrices/theory.html" style="border:0;color:inherit">03 · Matrices as transformations →</a></h3>

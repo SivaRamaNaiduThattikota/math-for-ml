@@ -481,6 +481,18 @@ mag, np.allclose(mag, np.linalg.norm(v))   <span class="c"># (~31.6, True)</span
   </tbody>
 </table>
 
+<div class="conceptcard">
+  <span class="cc-label">◆ Concept Card</span>
+  <div class="cc-title">A data row is a point in space.</div>
+  <p><span class="cc-sub">Reusable idea:</span> Every ML model starts by turning a record into a list of numbers — a vector.</p>
+  <ul>
+    <li><strong>Magnitude &amp; direction</strong> are the two things you ever ask of a vector.</li>
+    <li><strong>Add/scale</strong> are component-wise; <strong>distance = ‖a−b‖</strong> is the norm of the difference.</li>
+    <li><strong>Scale features first</strong> — big-unit features hijack any distance.</li>
+  </ul>
+  <div class="cc-hook"><b>The single hook:</b> once a row is a location in $\mathbb{R}^n$, the entire dataset is a cloud of points and learning becomes geometry.</div>
+</div>
+
 <div class="next">
   <span class="lbl">Next session</span>
   <h3><a href="../02_dot_product/theory.html" style="border:0;color:inherit">02 · Dot product &amp; similarity →</a></h3>
