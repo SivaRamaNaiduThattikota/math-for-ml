@@ -363,6 +363,9 @@ Notice there is no <code>for</code> loop anywhere. NumPy applies each operation 
 <hr class="divider">
 
 <!-- ════════════ EDGE / RULES / TRAPS ════════════ -->
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Every operation here is $O(n)$ — add, scale, dot and norm each touch all $n$ components once — and a vector needs $O(n)$ memory. The lever is <strong>vectorization</strong>: NumPy runs these as one compiled, contiguous pass, 10–100× faster than a Python loop. Same asymptotic cost, far better constant.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules & traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

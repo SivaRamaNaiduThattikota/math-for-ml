@@ -197,6 +197,15 @@ Inference turns "we saw a difference" into "the difference is (un)likely to be n
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 460 150" role="img" aria-label="null and alternative distributions with rejection tail"><path d="M20,120 C90,120 90,40 150,40 C210,40 210,120 280,120" fill="none" stroke="#9C99A6" stroke-width="2.5"/><path d="M180,120 C240,120 240,50 300,50 C360,50 360,120 430,120" fill="none" stroke="#0E8C80" stroke-width="2.5"/><path d="M243,120 C255,118 262,86 272,70 L272,120 Z" fill="rgba(193,58,87,.35)"/><line x1="243" y1="20" x2="243" y2="120" stroke="#C13A57" stroke-width="1.6" stroke-dasharray="4 4"/><g font-family="JetBrains Mono,monospace" font-size="10"><text x="150" y="34" text-anchor="middle" fill="#9C99A6">null</text><text x="330" y="44" text-anchor="middle" fill="#0E8C80">alternative</text><text x="250" y="14" text-anchor="middle" fill="#C13A57">reject region (p)</text></g></svg>
+<div class="dcap" style="margin-top:10px">A test asks: how extreme is the data if nothing is going on?</div>
+</div>
+<figcaption><strong>Figure — Null vs alternative.</strong> A second view: the shaded tail of the null distribution beyond the threshold is the $p$-value — the chance of data this extreme by luck alone. Small tail ⇒ reject the null.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+A test statistic is $O(n)$ to compute; the real cost is the <em>sample size</em> needed for adequate power — it grows as the effect you want to detect shrinks (roughly $\propto1/\text{effect}^2$). And testing many hypotheses inflates false positives, requiring correction.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

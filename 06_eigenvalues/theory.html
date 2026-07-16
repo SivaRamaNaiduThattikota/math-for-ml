@@ -208,6 +208,15 @@ Eigenvectors are the directions a matrix leaves alone; eigenvalues say by how mu
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 440 150" role="img" aria-label="eigenvector only scaled vs generic vector rotated"><defs><marker id=" evc" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5A4FCF"/></marker></defs><defs><marker id="evg" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9C99A6"/></marker></defs><g font-family="JetBrains Mono,monospace" font-size="10" fill="#26252E"><line x1="45" y1="120" x2="120" y2="60" stroke="#9C99A6" stroke-width="2.5" marker-end="url(#evg)"/><line x1="45" y1="120" x2="160" y2="28" stroke="#5A4FCF" stroke-width="3" marker-end="url(#evc)"/><text x="105" y="145" text-anchor="middle" fill="#5A4FCF">eigenvector: same line, scaled</text><line x1="290" y1="120" x2="360" y2="70" stroke="#9C99A6" stroke-width="2.5" marker-end="url(#evg)"/><line x1="290" y1="120" x2="345" y2="35" stroke="#C13A57" stroke-width="3" marker-end="url(#evc)"/><text x="345" y="145" text-anchor="middle" fill="#C13A57">generic: rotated too</text></g></svg>
+<div class="dcap" style="margin-top:10px">On an eigenvector a matrix acts like a single number (a scaling)</div>
+</div>
+<figcaption><strong>Figure — What makes a direction &ldquo;eigen.&rdquo;</strong> Grey is the input; on an eigenvector (left) the output stays on the same line, merely stretched by $\lambda$; a generic vector (right) is rotated off its line. Eigenvectors are the directions the matrix leaves pointing the same way.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+A full eigendecomposition is $O(n^3)$ time and $O(n^2)$ memory — fine for thousands, not millions. When you need only the top eigenvector, <strong>power iteration</strong> is $O(n^2)$ per step (one matrix–vector product) with $O(n)$ memory — how PageRank and the first principal component are found at scale.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

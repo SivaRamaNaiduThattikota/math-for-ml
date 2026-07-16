@@ -196,6 +196,15 @@ Information is surprise ($-\log p$); entropy is average surprise; cross-entropy 
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 190" role="img" aria-label="cross-entropy equals entropy plus KL divergence"><g font-family="JetBrains Mono,monospace" font-size="11" text-anchor="middle"><rect x="60" y="95" width="80" height="80" fill="rgba(14,140,128,.5)" stroke="#0E8C80"/><text x="100" y="140" fill="#fff">H(p)</text><rect x="60" y="45" width="80" height="50" fill="rgba(193,58,87,.35)" stroke="#C13A57"/><text x="100" y="76" fill="#C13A57">KL(p&#8214;q)</text><text x="100" y="30" fill="#26252E">cross-entropy</text><text x="215" y="110" fill="#6E6C7A" font-size="10">CE = H + KL</text><text x="215" y="128" fill="#6E6C7A" font-size="10">KL &#8805; 0</text></g></svg>
+<div class="dcap" style="margin-top:10px">Cross-entropy = entropy + KL: the extra bits from using the wrong distribution</div>
+</div>
+<figcaption><strong>Figure — CE = H + KL.</strong> A second view: cross-entropy stacks the irreducible uncertainty $H(p)$ and the penalty $\mathrm{KL}(p\Vert q)$ for using the wrong model $q$. Minimizing cross-entropy is minimizing that KL gap.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Entropy, cross-entropy and KL are sums over the support — $O(k)$ for $k$ outcomes. As a training loss, cross-entropy costs $O(\text{batch}\times\text{classes})$ per step; with a huge vocabulary (language models) that softmax-over-classes term becomes a real bottleneck (hence sampled/hierarchical softmax).</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

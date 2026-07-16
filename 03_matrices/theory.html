@@ -244,6 +244,9 @@ x = np.array([<span class="n">1</span>, <span class="n">1</span>], dtype=<span c
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+An $m\times n$ matrix costs $O(mn)$ to store and $O(mn)$ to apply to a vector. This is why model size is quoted in parameters — a dense layer mapping $n\to m$ features <em>is</em> an $m\times n$ weight matrix, so both its memory and its forward cost scale with $mn$.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

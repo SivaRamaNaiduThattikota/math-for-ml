@@ -203,6 +203,15 @@ Span asks "how much can we reach?"; independence asks "is anyone redundant?"; a 
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 440 150" role="img" aria-label="full rank spans the plane vs rank one spans a line"><defs><marker id="ARsp" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5A4FCF"/></marker></defs><g font-family="JetBrains Mono,monospace" font-size="10" fill="#26252E"><rect x="20" y="20" width="180" height="110" fill="rgba(90,79,207,.07)" stroke="#E7E3D9"/><line x1="55" y1="115" x2="170" y2="55" stroke="#5A4FCF" stroke-width="3" marker-end="url(#ARsp)"/><line x1="55" y1="115" x2="85" y2="35" stroke="#0E8C80" stroke-width="3" marker-end="url(#ARsp)"/><text x="60" y="145" text-anchor="middle" fill="#5A4FCF">rank 2 — fills the plane</text><line x1="245" y1="130" x2="415" y2="40" stroke="#C13A57" stroke-width="1.4" stroke-dasharray="4 4"/><line x1="255" y1="122" x2="345" y2="75" stroke="#5A4FCF" stroke-width="3" marker-end="url(#ARsp)"/><line x1="255" y1="122" x2="315" y2="90" stroke="#0E8C80" stroke-width="3" marker-end="url(#ARsp)"/><text x="330" y="145" text-anchor="middle" fill="#C13A57">rank 1 — only a line</text></g></svg>
+<div class="dcap" style="margin-top:10px">Rank = how many independent directions the vectors actually reach</div>
+</div>
+<figcaption><strong>Figure — Rank is reachable dimension.</strong> Two independent vectors span the whole plane (rank 2); two collinear ones only ever reach a single line (rank 1) no matter how you combine them. Redundant features collapse the rank.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Computing the rank (via SVD) costs $O(mn\,\min(m,n))$. The payoff is storage: a rank-$r$ matrix keeps only $r(m+n)$ numbers instead of $mn$ — the compression behind low-rank layers (LoRA) and PCA.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

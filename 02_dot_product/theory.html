@@ -288,6 +288,9 @@ dot product." Similarity, prediction, and attention are all the same multiply-an
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+A dot product is $n$ multiply-adds — $O(n)$ time, $O(1)$ extra memory. It is the atom of everything heavier: a matrix–vector product is $m$ dot products, a matrix multiply $mn$ of them, and GPUs run millions in parallel. Slow &ldquo;similarity search&rdquo; is just this operation repeated over a whole corpus.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules & traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

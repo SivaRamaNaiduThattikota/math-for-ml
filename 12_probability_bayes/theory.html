@@ -202,6 +202,15 @@ Probability is normalized counting; the sum and product rules are its algebra; B
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 460 150" role="img" aria-label="prior times likelihood gives posterior"><g fill="none" stroke-width="2.5"><path d="M20,120 C55,120 55,55 90,55 C125,55 125,120 160,120" stroke="#9C99A6"/><path d="M170,120 C205,120 205,35 240,35 C275,35 275,120 310,120" stroke="#0E8C80"/><path d="M320,120 C350,120 355,25 385,25 C415,25 420,120 445,120" stroke="#5A4FCF"/></g><g font-family="JetBrains Mono,monospace" font-size="11" text-anchor="middle"><text x="90" y="140" fill="#6E6C7A">prior</text><text x="240" y="140" fill="#0E8C80">&#215; likelihood</text><text x="385" y="140" fill="#5A4FCF">= posterior</text></g></svg>
+<div class="dcap" style="margin-top:10px">Posterior &#8733; prior &#215; likelihood — evidence sharpens and shifts belief</div>
+</div>
+<figcaption><strong>Figure — Bayesian updating.</strong> A second view: a broad prior belief, multiplied by the likelihood of the observed data, yields a narrower, shifted posterior. More data ⇒ a tighter posterior.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Bayes' rule is easy to write but the normalizing evidence $p(x)=\int$ is intractable in more than a few dimensions. That single integral is why real Bayesian inference falls back on sampling (MCMC) or optimization (variational inference) rather than the closed form.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

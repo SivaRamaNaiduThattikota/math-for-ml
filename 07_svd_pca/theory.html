@@ -206,6 +206,15 @@ SVD says every matrix is rotate → stretch → rotate, and the stretches (singu
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 170" role="img" aria-label="PCA principal axes on a tilted data cloud"><defs><marker id="ARpc" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5A4FCF"/></marker></defs><g><ellipse cx="150" cy="90" rx="95" ry="42" transform="rotate(-25 150 90)" fill="rgba(90,79,207,.08)" stroke="#E7E3D9"/><g fill="#9C99A6"><circle cx="90" cy="115" r="3"/><circle cx="120" cy="95" r="3"/><circle cx="150" cy="90" r="3"/><circle cx="180" cy="78" r="3"/><circle cx="210" cy="62" r="3"/><circle cx="110" cy="112" r="3"/><circle cx="140" cy="102" r="3"/><circle cx="175" cy="92" r="3"/><circle cx="200" cy="80" r="3"/><circle cx="130" cy="78" r="3"/></g><line x1="150" y1="90" x2="235" y2="50" stroke="#5A4FCF" stroke-width="3" marker-end="url(#ARpc)"/><line x1="150" y1="90" x2="122" y2="128" stroke="#0E8C80" stroke-width="3" marker-end="url(#ARpc)"/><text x="238" y="46" font-family="JetBrains Mono,monospace" font-size="10" fill="#5A4FCF">PC1</text><text x="108" y="140" font-family="JetBrains Mono,monospace" font-size="10" fill="#0E8C80">PC2</text></g></svg>
+<div class="dcap" style="margin-top:10px">PCA = SVD of the data: the principal axes are the directions of most spread</div>
+</div>
+<figcaption><strong>Figure — Principal axes of a data cloud.</strong> A second view of SVD/PCA: the first singular direction (PC1) points along the greatest spread, the second (PC2, orthogonal) along the next. Keeping the top axes is the low-rank approximation that compresses the data.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+A full SVD costs $O(mn\,\min(m,n))$. In practice you take a <strong>truncated / randomized</strong> SVD for the top-$k$ components — far cheaper — and keep only $k(m+n)$ numbers, the low-rank approximation behind PCA, recommenders and LoRA.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

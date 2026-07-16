@@ -200,6 +200,15 @@ The derivative is the slope; the gradient is the vector of slopes that points up
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 160" role="img" aria-label="tangent line as the local slope of a curve"><path d="M20,140 Q120,10 280,110" fill="none" stroke="#0E8C80" stroke-width="2.6"/><line x1="70" y1="150" x2="210" y2="30" stroke="#5A4FCF" stroke-width="2"/><circle cx="140" cy="90" r="4.5" fill="#5A4FCF"/><text x="150" y="84" font-family="JetBrains Mono,monospace" font-size="10" fill="#5A4FCF">slope = f&#39;(x)</text></svg>
+<div class="dcap" style="margin-top:10px">The derivative is the slope of the tangent — the local rate of change</div>
+</div>
+<figcaption><strong>Figure — Derivative = tangent slope.</strong> A second view: zoom in on any smooth curve and it looks like its tangent line; the derivative is that line&#39;s slope — the direction and steepness learning follows downhill.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+An analytic derivative is $O(1)$ extra work alongside the function; a finite-difference estimate needs 2 evaluations per input and loses precision. This is why frameworks use <strong>automatic differentiation</strong> — exact gradients at roughly the cost of the forward computation.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

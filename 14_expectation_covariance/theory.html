@@ -197,6 +197,15 @@ Expectation is the center, variance the spread, covariance/correlation how varia
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 170" role="img" aria-label="correlated scatter with covariance ellipse"><ellipse cx="150" cy="90" rx="95" ry="40" transform="rotate(-27 150 90)" fill="rgba(90,79,207,.08)" stroke="#5A4FCF" stroke-width="1.8"/><g fill="#9C99A6"><circle cx="95" cy="118" r="3"/><circle cx="125" cy="98" r="3"/><circle cx="150" cy="90" r="3"/><circle cx="180" cy="76" r="3"/><circle cx="205" cy="64" r="3"/><circle cx="135" cy="104" r="3"/><circle cx="170" cy="86" r="3"/><circle cx="112" cy="112" r="3"/></g><line x1="40" y1="150" x2="270" y2="150" stroke="#C9C4B6"/><line x1="40" y1="150" x2="40" y2="20" stroke="#C9C4B6"/></svg>
+<div class="dcap" style="margin-top:10px">Covariance is how two features move together — the tilt of the cloud</div>
+</div>
+<figcaption><strong>Figure — Covariance as a tilted cloud.</strong> A second view: positive covariance tilts the data ellipse along the diagonal (features rise together); the ellipse&#39;s axes are the eigenvectors of the covariance matrix — the bridge to PCA.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+A covariance matrix is $O(d^2)$ to store and $O(nd^2)$ to estimate from $n$ points — quadratic in the number of features. In high dimensions this is expensive and ill-conditioned, so ML often keeps only a <strong>diagonal</strong> or low-rank covariance ($O(d)$).</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

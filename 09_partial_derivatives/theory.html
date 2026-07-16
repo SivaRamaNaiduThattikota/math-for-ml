@@ -204,6 +204,15 @@ A partial is a slope in one direction; the gradient stacks them and points steep
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 170" role="img" aria-label="gradient perpendicular to contour lines"><defs><marker id="ARgr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5A4FCF"/></marker></defs><g fill="none" stroke="#C9C4B6" stroke-width="1.4"><ellipse cx="150" cy="90" rx="24" ry="18"/><ellipse cx="150" cy="90" rx="52" ry="39"/><ellipse cx="150" cy="90" rx="82" ry="62"/></g><line x1="150" y1="90" x2="150" y2="26" stroke="#5A4FCF" stroke-width="3" marker-end="url(#ARgr)"/><text x="158" y="40" font-family="JetBrains Mono,monospace" font-size="10" fill="#5A4FCF">&#8711;f (steepest ascent)</text></svg>
+<div class="dcap" style="margin-top:10px">The gradient points perpendicular to the contours — the steepest-ascent direction</div>
+</div>
+<figcaption><strong>Figure — The gradient on a contour map.</strong> A second view: each ring is a level set of $f$; the gradient at a point is perpendicular to the ring it sits on and points toward the fastest increase. Gradient descent steps the opposite way.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+A gradient has one entry per parameter — $O(\#\text{params})$ to store, and (via reverse-mode autodiff) obtainable in a single backward pass. A full Jacobian of an $m$-output, $n$-input map is $m\times n$: $O(mn)$ to store, which is why we rarely form it explicitly and use Jacobian–vector products instead.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

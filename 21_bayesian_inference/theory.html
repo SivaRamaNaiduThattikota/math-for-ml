@@ -202,6 +202,15 @@ Bayesian inference carries a <em>distribution</em> of belief and updates it with
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 160" role="img" aria-label="prior updates to a sharper posterior with data"><path d="M20,130 C90,130 90,90 150,90 C210,90 210,130 280,130" fill="none" stroke="#9C99A6" stroke-width="2.5"/><path d="M60,130 C120,130 120,28 150,28 C180,28 180,130 240,130" fill="none" stroke="#5A4FCF" stroke-width="2.6"/><g font-family="JetBrains Mono,monospace" font-size="10"><text x="60" y="112" fill="#9C99A6">prior</text><text x="185" y="46" fill="#5A4FCF">posterior</text></g></svg>
+<div class="dcap" style="margin-top:10px">Conjugate updating shifts and sharpens the Beta as data arrives</div>
+</div>
+<figcaption><strong>Figure — Prior to posterior.</strong> A second view: a broad Beta prior, updated by observed successes/failures, becomes a taller, narrower posterior. Conjugacy makes this a closed-form shift of the distribution&#39;s parameters.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+With a <strong>conjugate</strong> prior the posterior update is $O(1)$ — just add to the counts (Beta–Binomial, Gamma–Poisson). Step outside conjugacy and there is no closed form, so you pay the full cost of MCMC (many samples) or variational inference (an optimization) instead.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

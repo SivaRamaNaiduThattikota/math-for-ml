@@ -192,6 +192,15 @@ Match the test to the data: <b>t</b> for means (small samples / unknown variance
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 160" role="img" aria-label="t distribution has heavier tails than the normal"><path d="M20,130 C90,130 90,40 150,40 C210,40 210,130 280,130" fill="none" stroke="#5A4FCF" stroke-width="2.5"/><path d="M20,130 C95,128 100,60 150,60 C200,60 205,128 280,130" fill="none" stroke="#B07514" stroke-width="2.5" stroke-dasharray="5 4"/><g font-family="JetBrains Mono,monospace" font-size="10"><text x="150" y="32" text-anchor="middle" fill="#5A4FCF">Normal</text><text x="255" y="118" fill="#B07514">t (heavy tails)</text></g></svg>
+<div class="dcap" style="margin-top:10px">Small-sample tests use the heavier-tailed t distribution to stay honest</div>
+</div>
+<figcaption><strong>Figure — t vs Normal.</strong> A second view: with few samples the $t$ distribution&#39;s fatter tails demand stronger evidence to reject the null; as $n$ grows it converges to the Normal. Matching the test to the data is the core reflex.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Each test is $O(n)$ to compute — cheap. The cost hides in <em>design</em>: the sample size for a target power grows as the effect shrinks, and running many tests multiplies false positives, so you pay with corrections (Bonferroni, FDR) that make each individual test harder to pass.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

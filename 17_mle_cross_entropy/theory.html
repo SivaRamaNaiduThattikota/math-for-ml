@@ -198,6 +198,15 @@ Pick the distribution your data/target follows, write its likelihood, take the n
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 160" role="img" aria-label="likelihood peaks at the MLE"><path d="M20,140 C90,140 100,30 150,30 C200,30 210,140 280,140" fill="rgba(90,79,207,.10)" stroke="#5A4FCF" stroke-width="2.6"/><line x1="150" y1="30" x2="150" y2="140" stroke="#5B3FE0" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="150" cy="30" r="4.5" fill="#5B3FE0"/><text x="150" y="155" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#5B3FE0">&#952;&#770; (MLE)</text></svg>
+<div class="dcap" style="margin-top:10px">MLE picks the parameter at the peak of the likelihood; its negative log is your loss</div>
+</div>
+<figcaption><strong>Figure — The likelihood peak.</strong> A second view: the parameter that makes the observed data most probable sits at the top of the likelihood curve. Minimizing the <em>negative log</em>-likelihood (the loss) finds exactly that peak.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+The log-likelihood / cross-entropy is a sum over the dataset — $O(n)$ per evaluation. Optimizing it on millions of examples is only feasible because we estimate the gradient on <strong>mini-batches</strong> ($O(\text{batch})$) rather than the full sum each step.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

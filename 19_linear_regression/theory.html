@@ -201,6 +201,15 @@ Linear regression = predict with a dot product, fit by least squares (= Gaussian
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 170" role="img" aria-label="best-fit line with residuals"><line x1="30" y1="150" x2="285" y2="150" stroke="#C9C4B6"/><line x1="30" y1="150" x2="30" y2="15" stroke="#C9C4B6"/><line x1="40" y1="135" x2="280" y2="45" stroke="#5A4FCF" stroke-width="2.5"/><g stroke="#C13A57" stroke-width="1.4"><line x1="80" y1="120" x2="80" y2="105"/><line x1="140" y1="95" x2="140" y2="112"/><line x1="200" y1="70" x2="200" y2="88"/><line x1="245" y1="55" x2="245" y2="40"/></g><g fill="#26252E"><circle cx="80" cy="105" r="3.2"/><circle cx="140" cy="112" r="3.2"/><circle cx="200" cy="88" r="3.2"/><circle cx="245" cy="40" r="3.2"/></g><text x="250" y="70" font-family="JetBrains Mono,monospace" font-size="10" fill="#C13A57">residuals</text></svg>
+<div class="dcap" style="margin-top:10px">Least squares picks the line minimizing the squared residuals (rose segments)</div>
+</div>
+<figcaption><strong>Figure — Best fit &amp; residuals.</strong> A second view: the fitted line minimizes the total squared length of the vertical residuals from each point. $R^2$ measures how much of the variance those residuals leave unexplained.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+The closed form (normal equations) costs $O(nd^2 + d^3)$ and squares the conditioning; a $QR$/SVD solve is stabler at similar cost. For large $n$ or $d$ you drop the closed form entirely and fit with (stochastic) gradient descent — $O(nd)$ per pass.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

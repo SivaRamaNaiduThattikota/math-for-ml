@@ -198,6 +198,15 @@ The chain rule multiplies rates along a chain; backprop is that rule run backwar
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 600 140" role="img" aria-label="forward activations and backward gradients"><defs><marker id="cbf" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0E8C80"/></marker><marker id="cbb" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#C13A57"/></marker></defs><g font-family="JetBrains Mono,monospace" font-size="12" text-anchor="middle" fill="#26252E"><rect x="20" y="52" width="80" height="40" rx="9" fill="none" stroke="#C9C4B6"/><text x="60" y="76">x</text><rect x="180" y="52" width="90" height="40" rx="9" fill="none" stroke="#C9C4B6"/><text x="225" y="76">layer</text><rect x="350" y="52" width="90" height="40" rx="9" fill="none" stroke="#C9C4B6"/><text x="395" y="76">layer</text><rect x="510" y="52" width="70" height="40" rx="9" fill="none" stroke="#C9C4B6"/><text x="545" y="76">loss</text><line x1="100" y1="66" x2="178" y2="66" stroke="#0E8C80" stroke-width="2" marker-end="url(#cbf)"/><line x1="270" y1="66" x2="348" y2="66" stroke="#0E8C80" stroke-width="2" marker-end="url(#cbf)"/><line x1="440" y1="66" x2="508" y2="66" stroke="#0E8C80" stroke-width="2" marker-end="url(#cbf)"/><line x1="508" y1="82" x2="440" y2="82" stroke="#C13A57" stroke-width="2" marker-end="url(#cbb)"/><line x1="348" y1="82" x2="270" y2="82" stroke="#C13A57" stroke-width="2" marker-end="url(#cbb)"/><line x1="178" y1="82" x2="100" y2="82" stroke="#C13A57" stroke-width="2" marker-end="url(#cbb)"/><text x="300" y="34" font-size="10" fill="#0E8C80">forward — activations</text><text x="300" y="122" font-size="10" fill="#C13A57">backward — gradients (chain rule)</text></g></svg>
+<div class="dcap" style="margin-top:10px">Backprop = the chain rule run backward, reusing each layer&#39;s local derivative</div>
+</div>
+<figcaption><strong>Figure — The two passes.</strong> A second view: forward (teal) each layer computes its output; backward (rose) the loss&#39;s gradient flows down the chain, multiplied by each layer&#39;s local derivative. One backward sweep yields every gradient.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Reverse-mode (backprop) computes <em>all</em> parameter gradients in one backward pass — $O(1)$ forward-passes' worth of work — versus one pass per input for forward mode. The price is memory: the forward activations must be cached for the backward pass ($O(\text{network size}\times\text{batch})$), which is why training memory grows with depth and batch.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

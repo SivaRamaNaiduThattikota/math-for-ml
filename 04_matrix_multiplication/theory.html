@@ -209,6 +209,15 @@ Session 3: a matrix transforms space. Session 4: multiplying matrices <em>compos
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 560 130" role="img" aria-label="AB means apply B then A"><defs><marker id="ARmm" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5A4FCF"/></marker></defs><g font-family="JetBrains Mono,monospace" font-size="12" text-anchor="middle" fill="#26252E"><rect x="24" y="48" width="90" height="40" rx="9" fill="none" stroke="#C9C4B6"/><text x="69" y="72">x</text><rect x="190" y="48" width="90" height="40" rx="9" fill="none" stroke="#0E8C80"/><text x="235" y="72" fill="#0E8C80">B x</text><rect x="356" y="48" width="120" height="40" rx="9" fill="none" stroke="#5A4FCF"/><text x="416" y="72" fill="#5A4FCF">A(Bx)</text><line x1="116" y1="68" x2="188" y2="68" stroke="#5A4FCF" stroke-width="2" marker-end="url(#ARmm)"/><line x1="282" y1="68" x2="354" y2="68" stroke="#5A4FCF" stroke-width="2" marker-end="url(#ARmm)"/><text x="152" y="40" font-size="10" fill="#0E8C80">apply B</text><text x="318" y="40" font-size="10" fill="#5A4FCF">then A</text><text x="250" y="112" fill="#6E6C7A" font-size="11">(AB)x = A(Bx) — compose right-to-left</text></g></svg>
+<div class="dcap" style="margin-top:10px">A matrix product is a composition of transformations</div>
+</div>
+<figcaption><strong>Figure — Multiplication = composition.</strong> A second view: $AB$ means &ldquo;do $B$, then $A$.&rdquo; The output of one transformation feeds the next, which is why the inner dimensions must match and why order matters ($AB\neq BA$).</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Multiplying $m\times k$ by $k\times n$ costs $O(mkn)$ multiply-adds — the dominant FLOP count in a network's forward and backward passes — with $O(mn)$ memory for the result. This is exactly what GPUs are built to accelerate, and why low rank, sparsity and quantization (shrinking the matrices) are the levers for faster models.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>

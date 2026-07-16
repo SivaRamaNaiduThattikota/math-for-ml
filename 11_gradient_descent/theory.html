@@ -210,6 +210,15 @@ Gradient descent is "step opposite the gradient, repeat." The learning rate sets
 <hr class="divider">
 
 <!-- ═════════ REFERENCE ═════════ -->
+<figure class="diagram"><div class="frame">
+<svg viewBox="0 0 300 160" role="img" aria-label="gradient descent stepping down a bowl"><path d="M20,20 Q150,180 280,20" fill="none" stroke="#C9C4B6" stroke-width="1.8"/><g fill="#5A4FCF"><circle cx="45" cy="52" r="4"/><circle cx="85" cy="104" r="4"/><circle cx="120" cy="132" r="4"/><circle cx="145" cy="141" r="4.5"/></g><g stroke="#5A4FCF" stroke-width="1.4" stroke-dasharray="3 3"><line x1="45" y1="52" x2="85" y2="104"/><line x1="85" y1="104" x2="120" y2="132"/><line x1="120" y1="132" x2="145" y2="141"/></g><text x="150" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#5A4FCF">&#8722;&#951;&#8711;L per step</text></svg>
+<div class="dcap" style="margin-top:10px">Each step moves against the gradient by the learning rate — downhill to the minimum</div>
+</div>
+<figcaption><strong>Figure — Rolling to the bottom.</strong> A second view of $\theta\leftarrow\theta-\eta\nabla L$: from a starting point the iterates step downhill, shrinking as the slope flattens near the minimum. Too large a step overshoots; too small crawls.</figcaption></figure>
+
+<div class="callout c-why"><span class="tag">Computational &amp; memory cost</span>
+Each step costs one gradient — $O(\#\text{params}\times\text{batch})$. Full-batch descent is accurate but expensive per step; <strong>SGD</strong> uses a cheap mini-batch estimate. The <em>number</em> of steps to converge scales with the problem's conditioning, which is why scaling and normalization pay off.</div>
+
 <h2 id="ref"><span class="num">Reference</span>Edge cases, rules &amp; traps</h2>
 
 <h3>Edge cases &amp; gotchas</h3>
